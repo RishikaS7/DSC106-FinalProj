@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Who Gets the Sun First? SF vs SD Marine Layer</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+  :root {
+    --surface: #fcfcfb; --page: #f9f9f7;
+    --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7;
+    --sf: #2a78d6; --sd: #eb6834;
+  }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  .lede { color: var(--ink2); margin: 0 0 28px; }
+  .card { background: var(--surface); border: 1px solid rgba(11,11,11,0.10);
+          border-radius: 12px; padding: 20px 20px 12px; margin-bottom: 28px; }
+  .card h2 { font-size: 18px; margin: 0 0 4px; }
+  .card p.sub { font-size: 13px; color: var(--ink2); margin: 0 0 10px; }
+  .legend { display: flex; gap: 18px; font-size: 13px; color: var(--ink2); margin-bottom: 4px; }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px;
+                         border-radius: 3px; margin-right: 6px; vertical-align: -1px;
+                         background: var(--c); }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis text { fill: var(--muted); font-size: 12px; }
+  .axis path, .axis line { stroke: var(--axis); }
+  .grid line { stroke: var(--grid); }
+  .grid path { display: none; }
+  .axis-label { fill: var(--ink2); font-size: 12px; }
+  .value-label { fill: var(--ink); font-size: 12px; text-anchor: middle; }
+  .direct-label { font-size: 13px; font-weight: 600; fill: var(--ink); }
+  .tooltip { position: fixed; pointer-events: none; background: var(--surface);
+             border: 1px solid rgba(11,11,11,0.12); border-radius: 8px;
+             box-shadow: 0 4px 14px rgba(0,0,0,0.08); padding: 8px 10px;
+             font-size: 13px; line-height: 1.5; opacity: 0; transition: opacity .1s; }
+  .tooltip .t { font-weight: 600; margin-bottom: 2px; }
+  .tooltip .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+                 margin-right: 6px; vertical-align: -1px; }
+  footer { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Who Gets the Sun First?</h1>
+  <p class="lede">How the June marine layer burns off in San Francisco vs. San Diego — GOES-18 satellite, June 2025.</p>
+
+  <section class="card">
+    <h2 id="bar-title">How many June mornings were overcast?</h2>
+    <p class="sub">Days when more than 50% of the coastal land near each city was under cloud.</p>
+    <div class="legend">
+      <span style="--c: var(--sf)">San Francisco</span>
+      <span style="--c: var(--sd)">San Diego</span>
+    </div>
+    <svg id="bars"></svg>
+  </section>
+
+  <section class="card">
+    <h2>San Diego starts June mornings far cloudier, but both cities converge by noon</h2>
+    <p class="sub">Average share of coastal land under cloud, by hour (PDT), across all June 2025 days.
+      Hours before 8 AM are excluded: the satellite's night-time cloud algorithm misses low fog around dawn.</p>
+    <div class="legend">
+      <span style="--c: var(--sf)">San Francisco</span>
+      <span style="--c: var(--sd)">San Diego</span>
+    </div>
+    <svg id="lines"></svg>
+  </section>
+
+  <footer>Data: NOAA GOES-18 ABI Level-2 Clear Sky Mask (ABI-L2-ACMC), one scan per hour.
+    "Coastal land" = land pixels within ~10 km of each city's coast (SF: 37.60–37.90°N, 122.35–122.55°W;
+    SD: 32.65–33.00°N, 117.10–117.30°W).</footer>
+</main>
+<div class="tooltip" id="tip"></div>
+
+<script>
+const CITIES = ["San Francisco", "San Diego"];
+const COLOR = { "San Francisco": "#2a78d6", "San Diego": "#eb6834" };
+const OVERCAST = 50;                 // % threshold for an "overcast" day
+const BAR_HOURS = [8, 10, 12];
+const tip = d3.select("#tip");
+const fmtHour = h => `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
+
+function showTip(event, html) {
+  tip.html(html).style("opacity", 1);
+  const pad = 14, w = tip.node().offsetWidth;
+  let x = event.clientX + pad;
+  if (x + w > window.innerWidth - 8) x = event.clientX - w - pad;
+  tip.style("left", x + "px").style("top", (event.clientY + pad) + "px");
+}
+const hideTip = () => tip.style("opacity", 0);
+const swatch = c => `<span class="sw" style="background:${COLOR[c]}"></span>`;
+
+d3.json("coastal_cloud_june2025.json").then(rows => {
+  const nDays = new Set(rows.map(d => d.date)).size;
+  drawBars(rows, nDays);
+  drawLines(rows);
+});
+
+// ---------------- VIS 1: overcast-day counts ----------------
+function drawBars(rows, nDays) {
+  const data = BAR_HOURS.flatMap(h => CITIES.map(city => {
+    const sel = rows.filter(d => d.city === city && d.hour === h);
+    return { hour: h, city, days: sel.filter(d => d.pct > OVERCAST).length, total: sel.length };
+  }));
+  const sd8 = data.find(d => d.city === "San Diego" && d.hour === 8);
+  const sf8 = data.find(d => d.city === "San Francisco" && d.hour === 8);
+  d3.select("#bar-title").text(
+    `San Diego was overcast on ${sd8.days} of ${nDays} June mornings, while San Francisco only had ${sf8.days}`);
+
+  const W = 820, H = 380, m = { top: 16, right: 10, bottom: 36, left: 46 };
+  const svg = d3.select("#bars").attr("viewBox", `0 0 ${W} ${H}`);
+  const x0 = d3.scaleBand().domain(BAR_HOURS).range([m.left, W - m.right]).padding(0.28);
+  const x1 = d3.scaleBand().domain(CITIES).range([0, x0.bandwidth()]).paddingInner(0.06);
+  const y = d3.scaleLinear().domain([0, nDays]).range([H - m.bottom, m.top]);
+
+  svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
+     .call(d3.axisLeft(y).ticks(6).tickSize(-(W - m.left - m.right)).tickFormat(""));
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
+     .call(d3.axisLeft(y).ticks(6).tickSize(0).tickPadding(8)).call(g => g.select(".domain").remove());
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`)
+     .call(d3.axisBottom(x0).tickFormat(h => h === 12 ? "Noon" : fmtHour(h)).tickSize(0).tickPadding(10))
+     .selectAll("text").style("font-size", "13px").style("fill", "var(--ink2)");
+  svg.append("text").attr("class", "axis-label").attr("transform", "rotate(-90)")
+     .attr("x", -(H - m.bottom + m.top) / 2).attr("y", 12).attr("text-anchor", "middle")
+     .text(`Overcast days (out of ${nDays})`);
+
+  // bar with 4px rounded top, square at baseline
+  const barPath = (x, y0, w, h, r = 4) => {
+    r = Math.min(r, h, w / 2);
+    return `M${x},${y0}V${y0 - h + r}Q${x},${y0 - h} ${x + r},${y0 - h}H${x + w - r}` +
+           `Q${x + w},${y0 - h} ${x + w},${y0 - h + r}V${y0}Z`;
+  };
+  const g = svg.append("g");
+  g.selectAll("path.bar").data(data).join("path").attr("class", "bar")
+    .attr("fill", d => COLOR[d.city])
+    .attr("d", d => barPath(x0(d.hour) + x1(d.city), y(0), x1.bandwidth(), y(0) - y(d.days)));
+  g.selectAll("text.value-label").data(data).join("text").attr("class", "value-label")
+    .attr("x", d => x0(d.hour) + x1(d.city) + x1.bandwidth() / 2)
+    .attr("y", d => y(d.days) - 6).text(d => d.days);
+  // hover target: full column height, bigger than the bar
+  g.selectAll("rect.hit").data(data).join("rect").attr("class", "hit")
+    .attr("x", d => x0(d.hour) + x1(d.city)).attr("width", x1.bandwidth())
+    .attr("y", m.top).attr("height", H - m.bottom - m.top).attr("fill", "transparent")
+    .on("mousemove", (e, d) => showTip(e,
+      `<div class="t">${swatch(d.city)}${d.city} · ${d.hour === 12 ? "Noon" : fmtHour(d.hour)}</div>
+       ${d.days} of ${d.total} days overcast (${Math.round(100 * d.days / d.total)}%)`))
+    .on("mouseleave", hideTip);
+}
+
+// ---------------- VIS 2: hourly mean cloud cover ----------------
+function drawLines(rows) {
+  const hours = d3.range(8, 20);
+  const series = CITIES.map(city => ({
+    city,
+    values: hours.map(h => ({
+      hour: h,
+      pct: d3.mean(rows.filter(d => d.city === city && d.hour === h), d => d.pct)
+    }))
+  }));
+
+  const W = 820, H = 400, m = { top: 16, right: 16, bottom: 46, left: 150 };
+  const svg = d3.select("#lines").attr("viewBox", `0 0 ${W} ${H}`);
+  const x = d3.scaleLinear().domain([8, 19]).range([m.left, W - m.right]);
+  const y = d3.scaleLinear().domain([0, 100]).range([H - m.bottom, m.top]);
+
+  svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
+     .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickSize(-(W - m.left - m.right)).tickFormat(""));
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
+     .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickFormat(d => d + "%").tickSize(0).tickPadding(8))
+     .call(g => g.select(".domain").remove());
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`)
+     .call(d3.axisBottom(x).tickValues(hours).tickFormat(h => `${h % 12 || 12}${h < 12 ? "a" : "p"}`)
+       .tickSize(0).tickPadding(10));
+  svg.append("text").attr("class", "axis-label").attr("x", (m.left + W - m.right) / 2)
+     .attr("y", H - 6).attr("text-anchor", "middle").text("Hour of day (PDT)");
+
+  const line = d3.line().x(d => x(d.hour)).y(d => y(d.pct));
+  const g = svg.append("g");
+  g.selectAll("path.line").data(series).join("path")
+    .attr("fill", "none").attr("stroke", d => COLOR[d.city]).attr("stroke-width", 2.2)
+    .attr("d", d => line(d.values));
+  series.forEach(s => {
+    g.selectAll(null).data(s.values).join("circle")
+      .attr("cx", d => x(d.hour)).attr("cy", d => y(d.pct)).attr("r", 4.5)
+      .attr("fill", COLOR[s.city]).attr("stroke", "var(--surface)").attr("stroke-width", 2);
+    const first = s.values[0];
+    g.append("text").attr("class", "direct-label")
+      .attr("x", x(first.hour) - 12).attr("y", y(first.pct)).attr("dy", "0.35em")
+      .attr("text-anchor", "end").text(`${s.city}  ${Math.round(first.pct)}%`);
+  });
+
+  // crosshair + tooltip
+  const cross = svg.append("line").attr("stroke", "var(--muted)").attr("stroke-dasharray", "3 3")
+    .attr("y1", m.top).attr("y2", H - m.bottom).style("opacity", 0);
+  const dots = svg.append("g").style("opacity", 0);
+  const hoverDots = dots.selectAll("circle").data(series).join("circle").attr("r", 6.5)
+    .attr("fill", d => COLOR[d.city]).attr("stroke", "var(--surface)").attr("stroke-width", 2.5);
+  svg.append("rect").attr("x", m.left).attr("y", m.top)
+    .attr("width", W - m.left - m.right).attr("height", H - m.top - m.bottom).attr("fill", "transparent")
+    .on("mousemove", function (e) {
+      const [mx] = d3.pointer(e, this);
+      const h = Math.max(8, Math.min(19, Math.round(x.invert(mx))));
+      cross.attr("x1", x(h)).attr("x2", x(h)).style("opacity", 1);
+      dots.style("opacity", 1);
+      hoverDots.attr("cx", x(h)).attr("cy", s => y(s.values.find(v => v.hour === h).pct));
+      showTip(e, `<div class="t">${fmtHour(h)}</div>` + series.map(s =>
+        `${swatch(s.city)}${s.city}: <b>${Math.round(s.values.find(v => v.hour === h).pct)}%</b> cloudy`
+      ).join("<br>"));
+    })
+    .on("mouseleave", () => { cross.style("opacity", 0); dots.style("opacity", 0); hideTip(); });
+}
+</script>
+</body>
+</html>
