@@ -20,25 +20,3 @@ Rishika Sahu · Natalie Wu · Marcus de Ramos · Yagnasri Chilukuri
 NOAA **GOES-18 ABI Level-2 Clear Sky Mask** (ABI-L2-ACMC): one scan per hour, June 2025, covering the California coast.
 Each pixel is labeled cloudy or clear. We measure "coastal land" inside a box around each city
 (SF: 37.60–37.90°N, 122.35–122.55°W; SD: 32.65–33.00°N, 117.10–117.30°W).
-
-> **Heads up:** satellite timestamps are in **UTC**. The `hour` field in `coastal_cloud_june2025.json` is UTC, so
-> subtract 7 to get Pacific Daylight Time.
-
-## Repo layout
-
-| Path | What's there |
-| --- | --- |
-| `index.html` | The main article page (served by GitHub Pages) |
-| `rishika-vis/` | Part 1: the interactive satellite map, its data, and `prepare_map_data.py` |
-| `marcus-vis/`, `yagna-vis/` | Teammates' sections in progress |
-
-## Run it locally
-
-The page loads data files, so serve the folder instead of opening `index.html` directly:
-
-```bash
-python3 -m http.server
-# then open http://localhost:8000
-```
-
-Built with [D3.js](https://d3js.org/).
