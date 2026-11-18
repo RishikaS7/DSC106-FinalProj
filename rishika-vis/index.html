@@ -4,24 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Who Gets the Sun First? SF vs SD Marine Layer</title>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
 <style>
   :root {
     --surface: #fcfcfb; --page: #f9f9f7;
     --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
     --grid: #e1e0d9; --axis: #c3c2b7;
     --sf: #2a78d6; --sd: #eb6834;
+    --ocean: #1b3550; --land: #55604c; --night: #eeede8;
   }
+  * { box-sizing: border-box; }
   body { margin: 0; background: var(--page); color: var(--ink);
          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
-  h1 { font-size: 28px; margin: 0 0 6px; }
-  .lede { color: var(--ink2); margin: 0 0 28px; }
+  main { max-width: 900px; margin: 0 auto; padding: 32px 16px 60px; }
+  h1 { font-size: 30px; margin: 0 0 6px; }
+  .lede { color: var(--ink2); margin: 0 0 28px; line-height: 1.55; }
+  p { line-height: 1.6; }
   .card { background: var(--surface); border: 1px solid rgba(11,11,11,0.10);
-          border-radius: 12px; padding: 20px 20px 12px; margin-bottom: 28px; }
-  .card h2 { font-size: 18px; margin: 0 0 4px; }
-  .card p.sub { font-size: 13px; color: var(--ink2); margin: 0 0 10px; }
-  .legend { display: flex; gap: 18px; font-size: 13px; color: var(--ink2); margin-bottom: 4px; }
+          border-radius: 12px; padding: 20px 20px 14px; margin-bottom: 28px; }
+  .card h2 { font-size: 19px; margin: 0 0 4px; }
+  .card p.sub { font-size: 14px; color: var(--ink2); margin: 0 0 12px; }
+  .legend { display: flex; gap: 18px; font-size: 13px; color: var(--ink2); margin-bottom: 4px; flex-wrap: wrap; }
   .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px;
                          border-radius: 3px; margin-right: 6px; vertical-align: -1px;
                          background: var(--c); }
@@ -32,25 +36,92 @@
   .grid path { display: none; }
   .axis-label { fill: var(--ink2); font-size: 12px; }
   .value-label { fill: var(--ink); font-size: 12px; text-anchor: middle; }
-  .direct-label { font-size: 13px; font-weight: 600; fill: var(--ink); }
+  .direct-label { font-size: 13px; font-weight: 600; }
+  .note-label { fill: var(--muted); font-size: 11.5px; }
+
+  /* ---- interactive map ---- */
+  .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .play { border: 0; background: var(--ink); color: #fff; border-radius: 999px;
+          width: 38px; height: 38px; font-size: 14px; cursor: pointer; flex: none; }
+  .play:focus-visible, .chip:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--sf); outline-offset: 2px; }
+  .time-readout { font-variant-numeric: tabular-nums; font-weight: 650; font-size: 20px; min-width: 82px; }
+  input[type=range] { flex: 1; min-width: 160px; accent-color: var(--ink); }
+  .days { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; }
+  .chip { border: 1px solid rgba(11,11,11,0.14); background: var(--surface); color: var(--ink2);
+          border-radius: 6px; font: inherit; font-size: 12px; padding: 4px 0; width: 30px;
+          cursor: pointer; font-variant-numeric: tabular-nums; }
+  .chip.avg { width: auto; padding: 4px 10px; font-weight: 600; }
+  .chip[aria-pressed=true] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .days-label { font-size: 12px; color: var(--muted); width: 100%; margin-bottom: 2px; }
+  .map-wrap { position: relative; max-width: 620px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: var(--ocean); }
+  .map-wrap canvas { display: block; width: 100%; height: auto; }
+  .map-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .map-label { fill: #fff; font-size: 17px; font-weight: 600; paint-order: stroke;
+               stroke: rgba(0,0,0,0.55); stroke-width: 3px; }
+  .map-note { fill: rgba(255,255,255,0.85); font-size: 16px; font-style: italic; paint-order: stroke;
+              stroke: rgba(0,0,0,0.45); stroke-width: 3px; }
+  .map-key { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--ink2); margin: 8px 0 14px; flex-wrap: wrap; }
+  .map-key .ramp { width: 140px; height: 10px; border-radius: 3px;
+                   background: linear-gradient(to right, var(--land), #fff); }
+  .caption { font-size: 15px; margin: 6px 0 14px; min-height: 2.6em; }
+  .caption b.sf { color: var(--sf); } .caption b.sd { color: var(--sd); }
+
   .tooltip { position: fixed; pointer-events: none; background: var(--surface);
              border: 1px solid rgba(11,11,11,0.12); border-radius: 8px;
              box-shadow: 0 4px 14px rgba(0,0,0,0.08); padding: 8px 10px;
-             font-size: 13px; line-height: 1.5; opacity: 0; transition: opacity .1s; }
+             font-size: 13px; line-height: 1.5; opacity: 0; transition: opacity .1s; z-index: 5; }
   .tooltip .t { font-weight: 600; margin-bottom: 2px; }
   .tooltip .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
                  margin-right: 6px; vertical-align: -1px; }
-  footer { font-size: 12px; color: var(--muted); }
+  .writeup h3 { font-size: 16px; margin: 18px 0 4px; }
+  .writeup p { color: var(--ink2); font-size: 15px; margin: 0 0 8px; }
+  footer { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  #error { color: #b42318; }
 </style>
 </head>
 <body>
 <main>
   <h1>Who Gets the Sun First?</h1>
-  <p class="lede">How the June marine layer burns off in San Francisco vs. San Diego — GOES-18 satellite, June 2025.</p>
+  <p class="lede">Every June, a deck of low cloud called the <em>marine layer</em> parks off the California coast
+    and creeps ashore overnight. Locals call it "June Gloom." Here we use hourly GOES-18 satellite scans
+    to watch it move, and to ask whether San Francisco or San Diego actually gets more of it.</p>
 
+  <!-- ============ INTERACTIVE: the view from space ============ -->
+  <section class="card" id="map-card">
+    <h2>The view from space: watch the marine layer from 10 PM to noon</h2>
+    <p class="sub">Press play, or drag the slider through the night and morning. Pick a single day to see what one
+      real morning looked like, or keep <b>June average</b> to see how often each spot was cloudy at that hour.</p>
+
+    <div class="controls">
+      <button class="play" id="play" aria-label="Play animation">▶</button>
+      <span class="time-readout" id="time-readout">6 AM</span>
+      <input type="range" id="slot" min="0" max="14" step="1" value="8" aria-label="Hour of day (PDT)">
+    </div>
+    <div class="days" id="days" role="group" aria-label="Choose a day"></div>
+
+    <div class="map-wrap" id="map-wrap">
+      <canvas id="map"></canvas>
+      <svg id="map-overlay"></svg>
+    </div>
+    <div class="map-key">
+      <span>Clear</span><span class="ramp"></span><span id="key-right">Cloudy on every June day at this hour</span>
+    </div>
+
+    <p class="caption" id="caption"></p>
+
+    <div class="legend">
+      <span style="--c: var(--sf)">San Francisco coast</span>
+      <span style="--c: var(--sd)">San Diego coast</span>
+      <span id="avg-legend" style="--c: transparent; display:none">- - - June average</span>
+    </div>
+    <svg id="box-chart"></svg>
+    <p id="error" role="alert"></p>
+  </section>
+
+  <!-- ============ STATIC 1 ============ -->
   <section class="card">
     <h2 id="bar-title">How many June mornings were overcast?</h2>
-    <p class="sub">Days when more than 50% of the coastal land near each city was under cloud.</p>
+    <p class="sub">Days when more than half of the coastal land near each city was under cloud.</p>
     <div class="legend">
       <span style="--c: var(--sf)">San Francisco</span>
       <span style="--c: var(--sd)">San Diego</span>
@@ -58,10 +129,12 @@
     <svg id="bars"></svg>
   </section>
 
+  <!-- ============ STATIC 2 ============ -->
   <section class="card">
-    <h2>San Diego starts June mornings far cloudier, but both cities converge by noon</h2>
+    <h2>San Diego's coast is cloudier overnight; after sunrise both settle near one-quarter cloudy</h2>
     <p class="sub">Average share of coastal land under cloud, by hour (PDT), across all June 2025 days.
-      Hours before 8 AM are excluded: the satellite's night-time cloud algorithm misses low fog around dawn.</p>
+      Shaded hours are before sunrise, when the satellite has only infrared channels to work with and
+      low fog is harder to detect, so treat those values with caution.</p>
     <div class="legend">
       <span style="--c: var(--sf)">San Francisco</span>
       <span style="--c: var(--sd)">San Diego</span>
@@ -69,48 +142,338 @@
     <svg id="lines"></svg>
   </section>
 
-  <footer>Data: NOAA GOES-18 ABI Level-2 Clear Sky Mask (ABI-L2-ACMC), one scan per hour.
-    "Coastal land" = land pixels within ~10 km of each city's coast (SF: 37.60–37.90°N, 122.35–122.55°W;
-    SD: 32.65–33.00°N, 117.10–117.30°W).</footer>
+  <!-- ============ PROTOTYPE WRITEUP ============ -->
+  <section class="card writeup">
+    <h2>Prototype notes (Rishika's section)</h2>
+    <h3>What have we done so far?</h3>
+    <p>I turned the raw GOES-18 Clear Sky Mask cube (450 hourly scans of California for June 2025) into an
+      interactive "view from space" map. A Python script regrids it to a 0.03° grid and bit-packs every frame,
+      so the whole month loads in the browser as a single 3 MB file.
+      Readers can scrub or play through the hours from 10 PM to noon, switch between the June average and any
+      single day, and hover the map to read cloud frequency at any point.
+      A linked line chart below the map tracks the same coastal-land boxes we use elsewhere in the article, and
+      clicking it moves the map to that hour.
+      While building this I found that the <code>hour</code> field in our shared JSON is in UTC, not PDT, so I
+      relabeled my two static charts; the data actually covers 1 AM–noon local time, not 8 AM–7 PM.</p>
+
+    <h3>What will be most challenging to design, and why?</h3>
+    <p>The hardest part will be being honest about the night. Before about 5:45 AM, the satellite only has infrared
+      channels, and low fog looks a lot like the ocean, so some of the biggest swings in the data could be sensor
+      artifacts rather than weather.
+      We need an encoding (shading, annotation, or a confidence band) that tells readers this without burying the story.
+      A second challenge is that our data stops at noon PDT, so any part of the article about afternoon clearing or
+      sunsets will need new downloads of the afternoon scans.
+      Finally, we have to stitch four individual sections into one article that follows an and-but-therefore
+      arc, which means agreeing on shared colors, city definitions, and a single takeaway before the final submission.</p>
+  </section>
+
+  <footer>Data: NOAA GOES-18 ABI Level-2 Clear Sky Mask (ABI-L2-ACMC), one scan per hour, June 2025.
+    Satellite timestamps are UTC; all times shown here are PDT (UTC−7).
+    "Coastal land" = land pixels inside each city's box (SF: 37.60–37.90°N, 122.35–122.55°W;
+    SD: 32.65–33.00°N, 117.10–117.30°W), outlined on the map.
+    Basemap: US Census via us-atlas.</footer>
 </main>
 <div class="tooltip" id="tip"></div>
 
 <script>
 const CITIES = ["San Francisco", "San Diego"];
 const COLOR = { "San Francisco": "#2a78d6", "San Diego": "#eb6834" };
-const OVERCAST = 50;                 // % threshold for an "overcast" day
-const BAR_HOURS = [8, 10, 12];
+const BOXES = {
+  "San Francisco": { latMin: 37.60, latMax: 37.90, lonMin: -122.55, lonMax: -122.35 },
+  "San Diego":     { latMin: 32.65, latMax: 33.00, lonMin: -117.30, lonMax: -117.10 },
+};
+const OVERCAST = 50;
+const SUNRISE_SLOT = 7.75;            // ~5:45 AM PDT, slot 0 = 10 PM
 const tip = d3.select("#tip");
 const fmtHour = h => `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
+const utcToPdt = h => (h + 17) % 24;  // PDT = UTC - 7
+const slotToPdt = s => (22 + s) % 24; // slot 0..14 -> 10 PM .. noon
+const slotLabel = s => slotToPdt(s) === 12 ? "Noon" : fmtHour(slotToPdt(s));
 
 function showTip(event, html) {
   tip.html(html).style("opacity", 1);
-  const pad = 14, w = tip.node().offsetWidth;
+  const pad = 14, w = tip.node().offsetWidth, h = tip.node().offsetHeight;
   let x = event.clientX + pad;
   if (x + w > window.innerWidth - 8) x = event.clientX - w - pad;
-  tip.style("left", x + "px").style("top", (event.clientY + pad) + "px");
+  const y = Math.min(event.clientY + pad, window.innerHeight - h - 8);
+  tip.style("left", x + "px").style("top", y + "px");
 }
 const hideTip = () => tip.style("opacity", 0);
 const swatch = c => `<span class="sw" style="background:${COLOR[c]}"></span>`;
 
-d3.json("coastal_cloud_june2025.json").then(rows => {
+Promise.all([
+  d3.json("coastal_cloud_june2025.json"),
+  d3.json("cloud_meta.json"),
+  fetch("cloud_frames.bin").then(r => { if (!r.ok) throw Error(r.status); return r.arrayBuffer(); }),
+  d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/states-10m.json"),
+]).then(([rows, meta, buf, us]) => {
+  rows.forEach(d => { d.pdt = utcToPdt(d.hour); });   // JSON "hour" is UTC
   const nDays = new Set(rows.map(d => d.date)).size;
+  drawExplorer(meta, new Uint8Array(buf), us);
   drawBars(rows, nDays);
   drawLines(rows);
+}).catch(e => {
+  d3.select("#error").text("Could not load data. If you opened this file directly, serve the folder instead " +
+    "(python3 -m http.server). " + e);
 });
 
-// ---------------- VIS 1: overcast-day counts ----------------
+// =====================================================================
+// INTERACTIVE: satellite map + linked coastal-box chart
+// =====================================================================
+function drawExplorer(meta, bits, us) {
+  const { rows: R, cols: C, lat0, lon0, step, bytesPerFrame } = meta;
+  const N = R * C;
+  const cellLat = r => lat0 - r * step, cellLon = c => lon0 + c * step;
+
+  // ---- index frames by (day, slot) ----
+  const frames = meta.timesUTC.map((t, i) => {
+    const d = new Date(t);
+    return { i, day: d.getUTCDate(), slot: d.getUTCHours() - 5 };
+  }).filter(f => f.slot >= 0 && f.slot <= 14);
+  const DAYS = [...new Set(frames.map(f => f.day))].sort((a, b) => a - b);
+  const frameAt = new Map(frames.map(f => [`${f.day}|${f.slot}`, f.i]));
+  const bit = (fi, p) => (bits[fi * bytesPerFrame + (p >> 3)] >> (p & 7)) & 1;
+
+  // June-average cloud frequency per slot
+  const avg = d3.range(15).map(s => {
+    const out = new Float32Array(N), fs = frames.filter(f => f.slot === s);
+    for (const f of fs) {
+      const base = f.i * bytesPerFrame;
+      for (let p = 0; p < N; p++) out[p] += (bits[base + (p >> 3)] >> (p & 7)) & 1;
+    }
+    for (let p = 0; p < N; p++) out[p] /= fs.length;
+    return out;
+  });
+  const valueAt = (mode, s, p) => {
+    if (mode === "avg") return avg[s][p];
+    const fi = frameAt.get(`${mode}|${s}`);
+    return fi == null ? NaN : bit(fi, p);
+  };
+
+  // ---- coastal land cells inside each city's box ----
+  const land = topojson.feature(us, us.objects.nation);
+  const ca = topojson.feature(us, us.objects.states).features.find(f => f.id === "06");
+  const boxCells = {};
+  for (const city of CITIES) {
+    const b = BOXES[city], cells = [];
+    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+      const la = cellLat(r), lo = cellLon(c);
+      if (la >= b.latMin && la <= b.latMax && lo >= b.lonMin && lo <= b.lonMax &&
+          d3.geoContains(ca, [lo, la])) cells.push(r * C + c);
+    }
+    boxCells[city] = cells;
+  }
+  const boxPct = (mode, s, city) => {
+    const v = boxCells[city].map(p => valueAt(mode, s, p));
+    return v.some(Number.isNaN) ? null : 100 * d3.mean(v);
+  };
+  const series = mode => CITIES.map(city => ({
+    city, values: d3.range(15).map(s => ({ slot: s, pct: boxPct(mode, s, city) })),
+  }));
+  const avgSeries = series("avg");
+
+  // ---- map geometry ----
+  const W = 860;
+  const edges = { W: lon0 - step / 2, E: lon0 + (C - 0.5) * step,
+                  N: lat0 + step / 2, S: lat0 - (R - 0.5) * step };
+  const bboxGeo = { type: "MultiPoint", coordinates: [[edges.W, edges.S], [edges.E, edges.N]] };
+  const proj = d3.geoMercator().fitWidth(W, bboxGeo);
+  const H = Math.round(d3.geoPath(proj).bounds(bboxGeo)[1][1]);
+  const dpr = window.devicePixelRatio || 1;
+
+  const canvas = d3.select("#map").attr("width", W * dpr).attr("height", H * dpr).node();
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  const path = d3.geoPath(proj, ctx);
+  const borders = topojson.mesh(us, us.objects.states, (a, b) => a !== b);
+  // cloud layer is built at screen resolution: each screen pixel looks up its grid cell
+  // (exact Mercator latitudes, no seams between rows)
+  const off = document.createElement("canvas"); off.width = W; off.height = H;
+  const offCtx = off.getContext("2d"), img = offCtx.createImageData(W, H);
+  const colOf = d3.range(W).map(px => Math.round((proj.invert([px + 0.5, H / 2])[0] - lon0) / step));
+  const rowOf = d3.range(H).map(py => Math.round((lat0 - proj.invert([W / 2, py + 0.5])[1]) / step));
+
+  // overlay: city boxes + labels + annotations
+  const ov = d3.select("#map-overlay").attr("viewBox", `0 0 ${W} ${H}`);
+  for (const city of CITIES) {
+    const b = BOXES[city];
+    const [x0, y0] = proj([b.lonMin, b.latMax]), [x1, y1] = proj([b.lonMax, b.latMin]);
+    ov.append("rect").attr("x", x0 - 3).attr("y", y0 - 3).attr("width", x1 - x0 + 6).attr("height", y1 - y0 + 6)
+      .attr("fill", "none").attr("stroke", "#fff").attr("stroke-width", 4).attr("rx", 3);
+    ov.append("rect").attr("x", x0 - 3).attr("y", y0 - 3).attr("width", x1 - x0 + 6).attr("height", y1 - y0 + 6)
+      .attr("fill", "none").attr("stroke", COLOR[city]).attr("stroke-width", 2.2).attr("rx", 3);
+    const left = city === "San Diego";   // SD sits at the map's right edge
+    ov.append("text").attr("class", "map-label").attr("x", left ? x0 - 12 : x1 + 10)
+      .attr("text-anchor", left ? "end" : "start").attr("y", (y0 + y1) / 2).attr("dy", "0.35em")
+      .text(city);
+  }
+  const [ax, ay] = proj([-123.1, 34.4]);
+  ov.append("text").attr("class", "map-note").attr("x", ax).attr("y", ay).attr("text-anchor", "middle")
+    .text("Pacific Ocean");
+  const [bx, by] = proj([-123.1, 34.4]);
+  ov.append("text").attr("class", "map-note").attr("x", bx).attr("y", by + 16).attr("text-anchor", "middle")
+    .text("the stratus deck lives out here");
+  const [nx, ny] = proj([-118.6, 36.6]);
+  ov.append("text").attr("class", "map-note").attr("x", nx).attr("y", ny).attr("text-anchor", "middle")
+    .text("Inland California: almost always clear");
+
+  // map hover readout
+  ov.append("rect").attr("width", W).attr("height", H).attr("fill", "transparent")
+    .on("mousemove", function (e) {
+      const [mx, my] = d3.pointer(e, this);
+      const [lo, la] = proj.invert([mx, my]);
+      const r = Math.round((lat0 - la) / step), c = Math.round((lo - lon0) / step);
+      if (r < 0 || r >= R || c < 0 || c >= C) return hideTip();
+      const v = valueAt(state.mode, state.slot, r * C + c);
+      const where = `${la.toFixed(2)}°N, ${Math.abs(lo).toFixed(2)}°W`;
+      showTip(e, `<div class="t">${where} · ${slotLabel(state.slot)}</div>` + (state.mode === "avg"
+        ? `Cloudy on <b>${Math.round(v * DAYS.length)}</b> of ${DAYS.length} June days at this hour`
+        : (Number.isNaN(v) ? "No scan" : v ? "<b>Cloudy</b>" : "<b>Clear</b>")));
+    })
+    .on("mouseleave", hideTip);
+
+  function renderMap() {
+    const { mode, slot } = state;
+    const alpha = new Uint8Array(N);
+    for (let p = 0; p < N; p++) { const v = valueAt(mode, slot, p); alpha[p] = Number.isNaN(v) ? 0 : Math.round(v * 235); }
+    const d = img.data;
+    for (let py = 0, k = 0; py < H; py++) {
+      const r = rowOf[py];
+      for (let px = 0; px < W; px++, k += 4) {
+        const c = colOf[px];
+        d[k] = d[k + 1] = d[k + 2] = 255;
+        d[k + 3] = (r < 0 || r >= R || c < 0 || c >= C) ? 0 : alpha[r * C + c];
+      }
+    }
+    offCtx.putImageData(img, 0, 0);
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--ocean");
+    ctx.fillRect(0, 0, W, H);
+    ctx.beginPath(); path(land); ctx.fillStyle = "#55604c"; ctx.fill();
+    ctx.drawImage(off, 0, 0, W, H);
+    ctx.beginPath(); path(borders); ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.beginPath(); path(land); ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 0.8; ctx.stroke();
+  }
+
+  // ---- linked chart ----
+  const CW = 860, CH = 270, m = { top: 22, right: 130, bottom: 40, left: 44 };
+  const svg = d3.select("#box-chart").attr("viewBox", `0 0 ${CW} ${CH}`);
+  const x = d3.scaleLinear().domain([0, 14]).range([m.left, CW - m.right]);
+  const y = d3.scaleLinear().domain([0, 100]).range([CH - m.bottom, m.top]);
+
+  svg.append("rect").attr("x", x(0)).attr("y", m.top).attr("width", x(SUNRISE_SLOT) - x(0))
+    .attr("height", CH - m.top - m.bottom).attr("fill", "var(--night)");
+  svg.append("text").attr("class", "note-label").attr("x", x(0) + 6).attr("y", m.top + 13)
+    .text("Night: infrared-only, fog detection less reliable");
+  svg.append("text").attr("class", "note-label").attr("x", x(SUNRISE_SLOT) + 5).attr("y", m.top + 13)
+    .text("☀ sunrise ≈ 5:45");
+  svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
+    .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickSize(-(CW - m.left - m.right)).tickFormat(""));
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
+    .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickFormat(d => d + "%").tickSize(0).tickPadding(8))
+    .call(g => g.select(".domain").remove());
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${CH - m.bottom})`)
+    .call(d3.axisBottom(x).ticks(15).tickFormat(s => slotToPdt(s) === 12 ? "noon" :
+      `${slotToPdt(s) % 12 || 12}${slotToPdt(s) < 12 ? "a" : "p"}`).tickSize(0).tickPadding(10));
+  svg.append("text").attr("class", "axis-label").attr("x", (m.left + CW - m.right) / 2).attr("y", CH - 4)
+    .attr("text-anchor", "middle").text("Hour (PDT) · click or drag to move the map");
+
+  const line = d3.line().defined(d => d.pct != null).x(d => x(d.slot)).y(d => y(d.pct));
+  const avgLines = svg.append("g"), dayLines = svg.append("g"), labels = svg.append("g");
+  const rule = svg.append("line").attr("y1", m.top).attr("y2", CH - m.bottom)
+    .attr("stroke", "var(--ink)").attr("stroke-width", 1.2);
+  const dots = svg.append("g");
+
+  function updateChart() {
+    const cur = state.mode === "avg" ? avgSeries : series(state.mode);
+    avgLines.selectAll("path").data(state.mode === "avg" ? [] : avgSeries).join("path")
+      .attr("fill", "none").attr("stroke", d => COLOR[d.city]).attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", "4 4").attr("opacity", 0.55).attr("d", d => line(d.values));
+    dayLines.selectAll("path").data(cur).join("path")
+      .attr("fill", "none").attr("stroke", d => COLOR[d.city]).attr("stroke-width", 2.4)
+      .attr("d", d => line(d.values));
+    // direct labels at right end, nudged apart if they collide
+    const ends = cur.map(s => ({ city: s.city, y: y(s.values[14].pct ?? 0) }));
+    if (Math.abs(ends[0].y - ends[1].y) < 16) {
+      const mid = (ends[0].y + ends[1].y) / 2, up = ends[0].y <= ends[1].y ? 0 : 1;
+      ends[up].y = mid - 8; ends[1 - up].y = mid + 8;
+    }
+    labels.selectAll("text").data(ends).join("text").attr("class", "direct-label")
+      .attr("x", x(14) + 10).attr("y", d => d.y).attr("dy", "0.35em")
+      .attr("fill", d => COLOR[d.city]).text(d => d.city);
+    rule.attr("x1", x(state.slot)).attr("x2", x(state.slot));
+    dots.selectAll("circle").data(cur.map(s => ({ city: s.city, pct: s.values[state.slot].pct })))
+      .join("circle").attr("r", 6).attr("cx", x(state.slot)).attr("cy", d => y(d.pct ?? 0))
+      .attr("fill", d => COLOR[d.city]).attr("stroke", "var(--surface)").attr("stroke-width", 2.5)
+      .style("opacity", d => d.pct == null ? 0 : 1);
+    d3.select("#avg-legend").style("display", state.mode === "avg" ? "none" : null);
+
+    const [sf, sd] = cur.map(s => s.values[state.slot].pct);
+    const when = state.mode === "avg" ? "averaged over June" : `on June ${state.mode}`;
+    d3.select("#caption").html(sf == null ? `No scan available at ${slotLabel(state.slot)} ${when}.` :
+      `At <b>${slotLabel(state.slot)}</b>, ${when}: <b class="sf">${Math.round(sf)}%</b> of San Francisco's coastal land ` +
+      `and <b class="sd">${Math.round(sd)}%</b> of San Diego's was under cloud.` +
+      (state.slot < SUNRISE_SLOT ? " <span style='color:var(--muted)'>(night-time reading, lower confidence)</span>" : ""));
+  }
+
+  const setSlotFromPointer = function (e) {
+    const [mx] = d3.pointer(e, this);
+    setState({ slot: Math.max(0, Math.min(14, Math.round(x.invert(mx)))) });
+  };
+  svg.append("rect").attr("x", m.left).attr("y", m.top).attr("width", CW - m.left - m.right)
+    .attr("height", CH - m.top - m.bottom).attr("fill", "transparent").style("cursor", "pointer")
+    .on("pointerdown", function (e) { stop(); this.setPointerCapture(e.pointerId); setSlotFromPointer.call(this, e); })
+    .on("pointermove", function (e) { if (e.buttons) setSlotFromPointer.call(this, e); });
+
+  // ---- controls ----
+  const daysEl = d3.select("#days");
+  daysEl.append("div").attr("class", "days-label").text("Day (June 2025) · each day runs 10 PM the night before → noon");
+  daysEl.append("button").attr("class", "chip avg").attr("data-mode", "avg").text("June average");
+  DAYS.forEach(d => daysEl.append("button").attr("class", "chip").attr("data-mode", d)
+    .attr("aria-label", `June ${d}`).text(d));
+  daysEl.selectAll("button").on("click", function () {
+    const v = this.dataset.mode; setState({ mode: v === "avg" ? "avg" : +v });
+  });
+  const slider = d3.select("#slot").on("input", function () { stop(); setState({ slot: +this.value }); });
+
+  let timer = null;
+  const playBtn = d3.select("#play").on("click", () => timer ? stop() : start());
+  function start() {
+    if (state.slot === 14) setState({ slot: 0 });
+    timer = d3.interval(() => setState({ slot: state.slot === 14 ? 0 : state.slot + 1 }), 650);
+    playBtn.text("❚❚").attr("aria-label", "Pause animation");
+  }
+  function stop() {
+    if (timer) timer.stop(); timer = null;
+    playBtn.text("▶").attr("aria-label", "Play animation");
+  }
+
+  const state = { mode: "avg", slot: 8 };
+  function setState(patch) {
+    Object.assign(state, patch);
+    slider.property("value", state.slot);
+    d3.select("#time-readout").text(slotLabel(state.slot));
+    daysEl.selectAll("button").attr("aria-pressed", function () { return String(this.dataset.mode == state.mode); });
+    d3.select("#key-right").text(state.mode === "avg" ? "Cloudy on every June day at this hour" : "Cloudy");
+    renderMap(); updateChart();
+  }
+  setState({});
+}
+
+// =====================================================================
+// STATIC 1: overcast-day counts at three morning hours (PDT)
+// =====================================================================
 function drawBars(rows, nDays) {
+  const BAR_HOURS = [7, 9, 11];   // PDT, all after sunrise
   const data = BAR_HOURS.flatMap(h => CITIES.map(city => {
-    const sel = rows.filter(d => d.city === city && d.hour === h);
+    const sel = rows.filter(d => d.city === city && d.pdt === h);
     return { hour: h, city, days: sel.filter(d => d.pct > OVERCAST).length, total: sel.length };
   }));
-  const sd8 = data.find(d => d.city === "San Diego" && d.hour === 8);
-  const sf8 = data.find(d => d.city === "San Francisco" && d.hour === 8);
+  const sd = data.find(d => d.city === "San Diego" && d.hour === 7);
+  const sf = data.find(d => d.city === "San Francisco" && d.hour === 7);
   d3.select("#bar-title").text(
-    `San Diego was overcast on ${sd8.days} of ${nDays} June mornings, while San Francisco only had ${sf8.days}`);
+    `At 7 AM, San Diego's coast was overcast on ${sd.days} of ${nDays} June days; San Francisco's on ${sf.days}`);
 
-  const W = 820, H = 380, m = { top: 16, right: 10, bottom: 36, left: 46 };
+  const W = 820, H = 340, m = { top: 16, right: 10, bottom: 36, left: 46 };
   const svg = d3.select("#bars").attr("viewBox", `0 0 ${W} ${H}`);
   const x0 = d3.scaleBand().domain(BAR_HOURS).range([m.left, W - m.right]).padding(0.28);
   const x1 = d3.scaleBand().domain(CITIES).range([0, x0.bandwidth()]).paddingInner(0.06);
@@ -121,14 +484,14 @@ function drawBars(rows, nDays) {
   svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
      .call(d3.axisLeft(y).ticks(6).tickSize(0).tickPadding(8)).call(g => g.select(".domain").remove());
   svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`)
-     .call(d3.axisBottom(x0).tickFormat(h => h === 12 ? "Noon" : fmtHour(h)).tickSize(0).tickPadding(10))
+     .call(d3.axisBottom(x0).tickFormat(fmtHour).tickSize(0).tickPadding(10))
      .selectAll("text").style("font-size", "13px").style("fill", "var(--ink2)");
   svg.append("text").attr("class", "axis-label").attr("transform", "rotate(-90)")
      .attr("x", -(H - m.bottom + m.top) / 2).attr("y", 12).attr("text-anchor", "middle")
      .text(`Overcast days (out of ${nDays})`);
 
-  // bar with 4px rounded top, square at baseline
   const barPath = (x, y0, w, h, r = 4) => {
+    if (h <= 0) return "";
     r = Math.min(r, h, w / 2);
     return `M${x},${y0}V${y0 - h + r}Q${x},${y0 - h} ${x + r},${y0 - h}H${x + w - r}` +
            `Q${x + w},${y0 - h} ${x + w},${y0 - h + r}V${y0}Z`;
@@ -140,39 +503,42 @@ function drawBars(rows, nDays) {
   g.selectAll("text.value-label").data(data).join("text").attr("class", "value-label")
     .attr("x", d => x0(d.hour) + x1(d.city) + x1.bandwidth() / 2)
     .attr("y", d => y(d.days) - 6).text(d => d.days);
-  // hover target: full column height, bigger than the bar
   g.selectAll("rect.hit").data(data).join("rect").attr("class", "hit")
     .attr("x", d => x0(d.hour) + x1(d.city)).attr("width", x1.bandwidth())
     .attr("y", m.top).attr("height", H - m.bottom - m.top).attr("fill", "transparent")
     .on("mousemove", (e, d) => showTip(e,
-      `<div class="t">${swatch(d.city)}${d.city} · ${d.hour === 12 ? "Noon" : fmtHour(d.hour)}</div>
+      `<div class="t">${swatch(d.city)}${d.city} · ${fmtHour(d.hour)}</div>
        ${d.days} of ${d.total} days overcast (${Math.round(100 * d.days / d.total)}%)`))
     .on("mouseleave", hideTip);
 }
 
-// ---------------- VIS 2: hourly mean cloud cover ----------------
+// =====================================================================
+// STATIC 2: hourly mean cloud cover (PDT)
+// =====================================================================
 function drawLines(rows) {
-  const hours = d3.range(8, 20);
+  const hours = d3.range(1, 13);    // JSON covers 1 AM – noon PDT
   const series = CITIES.map(city => ({
     city,
     values: hours.map(h => ({
-      hour: h,
-      pct: d3.mean(rows.filter(d => d.city === city && d.hour === h), d => d.pct)
-    }))
+      hour: h, pct: d3.mean(rows.filter(d => d.city === city && d.pdt === h), d => d.pct),
+    })),
   }));
 
-  const W = 820, H = 400, m = { top: 16, right: 16, bottom: 46, left: 150 };
+  const W = 820, H = 380, m = { top: 16, right: 130, bottom: 46, left: 46 };
   const svg = d3.select("#lines").attr("viewBox", `0 0 ${W} ${H}`);
-  const x = d3.scaleLinear().domain([8, 19]).range([m.left, W - m.right]);
+  const x = d3.scaleLinear().domain([1, 12]).range([m.left, W - m.right]);
   const y = d3.scaleLinear().domain([0, 100]).range([H - m.bottom, m.top]);
 
+  svg.append("rect").attr("x", x(1)).attr("y", m.top).attr("width", x(5.75) - x(1))
+    .attr("height", H - m.top - m.bottom).attr("fill", "var(--night)");
+  svg.append("text").attr("class", "note-label").attr("x", x(1) + 6).attr("y", m.top + 14).text("Before sunrise");
   svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
      .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickSize(-(W - m.left - m.right)).tickFormat(""));
   svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
      .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickFormat(d => d + "%").tickSize(0).tickPadding(8))
      .call(g => g.select(".domain").remove());
   svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`)
-     .call(d3.axisBottom(x).tickValues(hours).tickFormat(h => `${h % 12 || 12}${h < 12 ? "a" : "p"}`)
+     .call(d3.axisBottom(x).tickValues(hours).tickFormat(h => h === 12 ? "noon" : `${h}a`)
        .tickSize(0).tickPadding(10));
   svg.append("text").attr("class", "axis-label").attr("x", (m.left + W - m.right) / 2)
      .attr("y", H - 6).attr("text-anchor", "middle").text("Hour of day (PDT)");
@@ -186,13 +552,16 @@ function drawLines(rows) {
     g.selectAll(null).data(s.values).join("circle")
       .attr("cx", d => x(d.hour)).attr("cy", d => y(d.pct)).attr("r", 4.5)
       .attr("fill", COLOR[s.city]).attr("stroke", "var(--surface)").attr("stroke-width", 2);
-    const first = s.values[0];
-    g.append("text").attr("class", "direct-label")
-      .attr("x", x(first.hour) - 12).attr("y", y(first.pct)).attr("dy", "0.35em")
-      .attr("text-anchor", "end").text(`${s.city}  ${Math.round(first.pct)}%`);
   });
+  const ends = series.map(s => ({ city: s.city, pct: s.values.at(-1).pct, y: y(s.values.at(-1).pct) }));
+  if (Math.abs(ends[0].y - ends[1].y) < 16) {
+    const mid = (ends[0].y + ends[1].y) / 2, up = ends[0].y <= ends[1].y ? 0 : 1;
+    ends[up].y = mid - 9; ends[1 - up].y = mid + 9;
+  }
+  g.selectAll("text.direct-label").data(ends).join("text").attr("class", "direct-label")
+    .attr("x", x(12) + 10).attr("y", d => d.y).attr("dy", "0.35em").attr("fill", d => COLOR[d.city])
+    .text(d => `${d.city} ${Math.round(d.pct)}%`);
 
-  // crosshair + tooltip
   const cross = svg.append("line").attr("stroke", "var(--muted)").attr("stroke-dasharray", "3 3")
     .attr("y1", m.top).attr("y2", H - m.bottom).style("opacity", 0);
   const dots = svg.append("g").style("opacity", 0);
@@ -202,11 +571,11 @@ function drawLines(rows) {
     .attr("width", W - m.left - m.right).attr("height", H - m.top - m.bottom).attr("fill", "transparent")
     .on("mousemove", function (e) {
       const [mx] = d3.pointer(e, this);
-      const h = Math.max(8, Math.min(19, Math.round(x.invert(mx))));
+      const h = Math.max(1, Math.min(12, Math.round(x.invert(mx))));
       cross.attr("x1", x(h)).attr("x2", x(h)).style("opacity", 1);
       dots.style("opacity", 1);
       hoverDots.attr("cx", x(h)).attr("cy", s => y(s.values.find(v => v.hour === h).pct));
-      showTip(e, `<div class="t">${fmtHour(h)}</div>` + series.map(s =>
+      showTip(e, `<div class="t">${h === 12 ? "Noon" : fmtHour(h)}</div>` + series.map(s =>
         `${swatch(s.city)}${s.city}: <b>${Math.round(s.values.find(v => v.hour === h).pct)}%</b> cloudy`
       ).join("<br>"));
     })
