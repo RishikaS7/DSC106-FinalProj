@@ -13,8 +13,6 @@ which city actually spends more of June under cloud.
 
 Rishika Sahu · Natalie Wu · Marcus de Ramos · Yagnasri Chilukuri
 
-*Final project for DSC 106: Introduction to Data Visualization, UC San Diego, Fall 2026.*
-
 ## Data
 
 NOAA **GOES-18 ABI Level-2 Clear Sky Mask** (ABI-L2-ACMC): one scan per hour, June 2025, covering the California coast.
