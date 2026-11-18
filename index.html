@@ -35,8 +35,14 @@
   .byline b { color: var(--ink2); font-weight: 600; }
   hr.rule { border: 0; border-top: 1px solid var(--rule); max-width: 680px; margin: 36px auto; }
   h2 { font-size: 30px; line-height: 1.2; margin: 56px 0 6px; }
-  .section-tag { font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .07em;
-                 text-transform: uppercase; color: var(--muted); margin: 64px 0 0; }
+  /* section headers: big number + label, with a rule above */
+  .part-head { display: flex; align-items: baseline; gap: 14px; border-top: 2px solid var(--ink);
+               padding-top: 14px; margin: 88px 0 0; font-family: var(--sans); }
+  .part-head .num { font-size: 44px; font-weight: 700; line-height: 1; color: var(--sd); font-variant-numeric: tabular-nums; }
+  .part-head .label { font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+  .part-head + h2 { margin-top: 18px; }
+  .part-head.todo { border-top-color: var(--axis); }
+  .part-head.todo .num, .part-head.todo .label { color: var(--axis); }
   p { margin: 0 0 20px; }
   .lead::first-letter { float: left; font-size: 66px; line-height: .9; padding: 6px 8px 0 0; font-weight: 700; }
   em { font-style: italic; }
@@ -71,19 +77,25 @@
   .play:focus-visible, .chip:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--sf); outline-offset: 2px; }
   .time-readout { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 20px; min-width: 82px; }
   input[type=range] { flex: 1; min-width: 160px; accent-color: var(--ink); }
-  .days { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 14px; }
-  .days-label { font-size: 12px; color: var(--muted); width: 100%; margin-bottom: 2px; }
-  .chip { border: 1px solid rgba(11,11,11,0.14); background: var(--surface); color: var(--ink2);
-          border-radius: 6px; font: inherit; font-size: 12px; padding: 4px 0; width: 30px;
-          cursor: pointer; font-variant-numeric: tabular-nums; }
-  .chip.avg { width: auto; padding: 4px 10px; font-weight: 600; }
+  /* day picker: one draggable strip chart instead of 30 buttons */
+  .day-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 16px; }
+  .chip { border: 1px solid rgba(11,11,11,0.16); background: var(--surface); color: var(--ink2);
+          border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 14px; cursor: pointer; }
   .chip[aria-pressed=true] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .or { font-size: 12px; color: var(--muted); }
+  .strip-wrap { flex: 1 1 100%; display: flex; align-items: center; gap: 4px; }
+  .nudge { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--ink2); cursor: pointer;
+           padding: 4px 6px; border-radius: 6px; }
+  .nudge:hover { background: #f0eee8; }
+  #day-strip { flex: 1; min-width: 0; cursor: pointer; touch-action: none; }
+  #day-strip:focus-visible { outline: 2px solid var(--sf); outline-offset: 2px; border-radius: 4px; }
+  .day-readout { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 14px; min-width: 64px; }
   .map-wrap { position: relative; max-width: 620px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: var(--ocean); }
   .map-wrap canvas { display: block; width: 100%; height: auto; }
   .map-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .map-label { fill: #fff; font-size: 17px; font-weight: 600; paint-order: stroke; stroke: rgba(0,0,0,0.55); stroke-width: 3px; }
-  .map-note { fill: rgba(255,255,255,0.88); font-size: 16px; font-style: italic; paint-order: stroke;
-              stroke: rgba(0,0,0,0.5); stroke-width: 3px; }
+  .map-label { fill: #fff; font-size: 13px; font-weight: 600; paint-order: stroke; stroke: rgba(0,0,0,0.6); stroke-width: 3px; }
+  .map-note { fill: rgba(255,255,255,0.92); font-size: 12px; font-style: italic; paint-order: stroke;
+              stroke: rgba(20,40,60,0.6); stroke-width: 3px; }
   .map-key { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px;
              color: var(--ink2); margin: 8px 0 14px; flex-wrap: wrap; }
   .map-key .ramp { width: 140px; height: 10px; border-radius: 3px; background: linear-gradient(to right, var(--land), #fff); }
@@ -134,7 +146,7 @@
      ===================================================================== -->
 <section id="view-from-space">
   <div class="prose">
-    <p class="section-tag">Part 1 · The view from space</p>
+    <div class="part-head"><span class="num">01</span><span class="label">The view from space</span></div>
     <h2>A cloud the size of a state, parked just offshore</h2>
     <p>The gloom has a technical name: the <em>marine layer</em>. Cold ocean water chills the air sitting right
       on top of it, and a warm layer of air higher up acts like a lid, trapping that cool, moist air near the surface.
@@ -147,14 +159,25 @@
   <div class="figure">
     <div class="fig-card" id="map-card">
       <p class="fig-title">The marine layer, hour by hour</p>
-      <p class="fig-sub">Drag the slider or press play. Keep <b>June average</b> to see how often each spot was cloudy
-        at that hour, or pick a single day to see one real morning. Hover the map to read any location.</p>
+      <p class="fig-sub">Drag the hour slider or press play. Keep <b>June average</b> to see how often each spot was cloudy
+        at that hour, or drag across the day strip to see one real morning. The strip's lines show each day's
+        6 AM–noon cloud cover, so the spikes are the gloomiest days. Hover the map to read any location.</p>
       <div class="controls">
         <button class="play" id="play" aria-label="Play animation">▶</button>
         <span class="time-readout" id="time-readout">6 AM</span>
         <input type="range" id="slot" min="0" max="14" step="1" value="8" aria-label="Hour of day (PDT)">
       </div>
-      <div class="days" id="days" role="group" aria-label="Choose a day"></div>
+      <div class="day-row">
+        <button class="chip" id="avg-btn" aria-pressed="true">June average</button>
+        <span class="or">or drag across the strip to pick a day:</span>
+        <span class="day-readout" id="day-readout">All June</span>
+        <div class="strip-wrap">
+          <button class="nudge" id="prev-day" aria-label="Previous day">‹</button>
+          <svg id="day-strip" tabindex="0" role="slider" aria-label="Day of June 2025"
+               aria-valuemin="1" aria-valuemax="30"></svg>
+          <button class="nudge" id="next-day" aria-label="Next day">›</button>
+        </div>
+      </div>
       <div class="map-wrap"><canvas id="map"></canvas><svg id="map-overlay"></svg></div>
       <div class="map-key"><span>Clear</span><span class="ramp"></span><span id="key-right">Cloudy on every June day at this hour</span></div>
       <p class="caption" id="caption"></p>
@@ -166,7 +189,8 @@
       <svg id="box-chart"></svg>
       <p id="error" role="alert"></p>
     </div>
-    <p class="fig-note">Source: NOAA GOES-18 ABI Level-2 Clear Sky Mask, one scan per hour, June 2025, regridded to 0.03°.
+    <p class="fig-note">Source: NOAA GOES-18 ABI Level-2 Clear Sky Mask, one scan per hour, June 2025, regridded to 0.03° (~3 km) and
+      lightly smoothed for display; percentages use the unsmoothed pixels.
       Boxes mark the coastal land we measure for each city. Times are Pacific Daylight Time.</p>
   </div>
 
@@ -200,21 +224,21 @@
      ===================================================================== -->
 <section id="part-2">
   <div class="prose">
-    <p class="section-tag">Part 2</p>
+    <div class="part-head todo"><span class="num">02</span><span class="label">Coming soon</span></div>
     <div class="placeholder">Natalie's section goes here</div>
   </div>
 </section>
 
 <section id="part-3">
   <div class="prose">
-    <p class="section-tag">Part 3</p>
+    <div class="part-head todo"><span class="num">03</span><span class="label">Coming soon</span></div>
     <div class="placeholder">Marcus's section goes here</div>
   </div>
 </section>
 
 <section id="part-4">
   <div class="prose">
-    <p class="section-tag">Part 4</p>
+    <div class="part-head todo"><span class="num">04</span><span class="label">Coming soon</span></div>
     <div class="placeholder">Yagna's section goes here</div>
   </div>
 </section>
@@ -346,22 +370,46 @@ function drawExplorer(meta, bits, us) {
   const avgSeries = series("avg");
 
   // ---- map ----
-  const W = 860;
+  const W = 620;   // CSS width of the map
   const edges = { W: lon0 - step / 2, E: lon0 + (C - 0.5) * step, N: lat0 + step / 2, S: lat0 - (R - 0.5) * step };
   const bboxGeo = { type: "MultiPoint", coordinates: [[edges.W, edges.S], [edges.E, edges.N]] };
   const proj = d3.geoMercator().fitWidth(W, bboxGeo);
   const H = Math.round(d3.geoPath(proj).bounds(bboxGeo)[1][1]);
-  const dpr = window.devicePixelRatio || 1;
-  const canvas = d3.select("#map").attr("width", W * dpr).attr("height", H * dpr).node();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const PW = Math.round(W * dpr), PH = Math.round(H * dpr);   // device pixels
+  const canvas = d3.select("#map").attr("width", PW).attr("height", PH).node();
   const ctx = canvas.getContext("2d");
   ctx.scale(dpr, dpr);
   const path = d3.geoPath(proj, ctx);
   const borders = topojson.mesh(us, us.objects.states, (a, b) => a !== b);
-  // cloud layer built at screen resolution: each screen pixel looks up its grid cell
-  const off = document.createElement("canvas"); off.width = W; off.height = H;
-  const offCtx = off.getContext("2d"), img = offCtx.createImageData(W, H);
-  const colOf = d3.range(W).map(px => Math.round((proj.invert([px + 0.5, H / 2])[0] - lon0) / step));
-  const rowOf = d3.range(H).map(py => Math.round((lat0 - proj.invert([W / 2, py + 0.5])[1]) / step));
+
+  // Cloud layer is drawn at full device resolution. Each device pixel finds its fractional
+  // grid position (exact Mercator latitude) and bilinearly blends the 4 surrounding cells,
+  // so cloud edges are smooth instead of blocky squares.
+  const off = document.createElement("canvas"); off.width = PW; off.height = PH;
+  const offCtx = off.getContext("2d"), img = offCtx.createImageData(PW, PH);
+  for (let k = 0; k < img.data.length; k += 4) img.data[k] = img.data[k + 1] = img.data[k + 2] = 255;
+  const c0 = new Int32Array(PW), fx = new Float32Array(PW), r0 = new Int32Array(PH), fy = new Float32Array(PH);
+  for (let px = 0; px < PW; px++) {
+    const g = Math.max(0, Math.min(C - 1.001, (proj.invert([(px + 0.5) / dpr, H / 2])[0] - lon0) / step));
+    c0[px] = Math.floor(g); fx[px] = g - c0[px];
+  }
+  for (let py = 0; py < PH; py++) {
+    const g = Math.max(0, Math.min(R - 1.001, (lat0 - proj.invert([W / 2, (py + 0.5) / dpr])[1]) / step));
+    r0[py] = Math.floor(g); fy[py] = g - r0[py];
+  }
+  const A = new Float32Array(N), T = new Float32Array(N);
+  // light [1,2,1] blur so lone speckle pixels read as wisps, not hard dots
+  function soften(src) {
+    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+      const i = r * C + c, l = c > 0 ? i - 1 : i, rr = c < C - 1 ? i + 1 : i;
+      T[i] = (src[l] + 2 * src[i] + src[rr]) / 4;
+    }
+    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+      const i = r * C + c, u = r > 0 ? i - C : i, d = r < R - 1 ? i + C : i;
+      src[i] = (T[u] + 2 * T[i] + T[d]) / 4;
+    }
+  }
 
   const ov = d3.select("#map-overlay").attr("viewBox", `0 0 ${W} ${H}`);
   for (const city of CITIES) {
@@ -377,7 +425,7 @@ function drawExplorer(meta, bits, us) {
   const note = (lonlat, dy, text) => { const [x, y] = proj(lonlat);
     ov.append("text").attr("class", "map-note").attr("x", x).attr("y", y + dy).attr("text-anchor", "middle").text(text); };
   note([-123.1, 34.4], 0, "Pacific Ocean");
-  note([-123.1, 34.4], 18, "the stratus deck lives out here");
+  note([-123.1, 34.4], 15, "the stratus deck lives out here");
   note([-118.6, 36.6], 0, "Inland California: almost always clear");
 
   ov.append("rect").attr("width", W).attr("height", H).attr("fill", "transparent")
@@ -396,15 +444,15 @@ function drawExplorer(meta, bits, us) {
 
   function renderMap() {
     const { mode, slot } = state;
-    const alpha = new Uint8Array(N);
-    for (let p = 0; p < N; p++) { const v = valueAt(mode, slot, p); alpha[p] = Number.isNaN(v) ? 0 : Math.round(v * 235); }
+    for (let p = 0; p < N; p++) { const v = valueAt(mode, slot, p); A[p] = Number.isNaN(v) ? 0 : v; }
+    soften(A);
     const d = img.data;
-    for (let py = 0, k = 0; py < H; py++) {
-      const r = rowOf[py];
-      for (let px = 0; px < W; px++, k += 4) {
-        const c = colOf[px];
-        d[k] = d[k + 1] = d[k + 2] = 255;
-        d[k + 3] = (r < 0 || r >= R || c < 0 || c >= C) ? 0 : alpha[r * C + c];
+    for (let py = 0, k = 3; py < PH; py++) {
+      const top = r0[py] * C, bot = top + C, ty = fy[py], uy = 1 - ty;
+      for (let px = 0; px < PW; px++, k += 4) {
+        const c = c0[px], tx = fx[px], ux = 1 - tx;
+        const v = (A[top + c] * ux + A[top + c + 1] * tx) * uy + (A[bot + c] * ux + A[bot + c + 1] * tx) * ty;
+        d[k] = v * 235;
       }
     }
     offCtx.putImageData(img, 0, 0);
@@ -480,11 +528,63 @@ function drawExplorer(meta, bits, us) {
     .on("pointermove", function (e) { if (e.buttons) setSlotFromPointer.call(this, e); });
 
   // ---- controls ----
-  const daysEl = d3.select("#days");
-  daysEl.append("div").attr("class", "days-label").text("Day (June 2025) · each day runs 10 PM the night before → noon");
-  daysEl.append("button").attr("class", "chip avg").attr("data-mode", "avg").text("June average");
-  DAYS.forEach(d => daysEl.append("button").attr("class", "chip").attr("data-mode", d).attr("aria-label", `June ${d}`).text(d));
-  daysEl.selectAll("button").on("click", function () { const v = this.dataset.mode; setState({ mode: v === "avg" ? "avg" : +v }); });
+  // ---- day strip: each day's daytime (6 AM–noon) coastal cloud cover; drag to pick a day ----
+  const daily = DAYS.map(day => {
+    const o = { day };
+    for (const city of CITIES) o[city] = d3.mean(d3.range(8, 15), s => boxPct(day, s, city));
+    return o;
+  });
+  const SW = 820, SH = 78, sm = { l: 10, r: 10, t: 6, b: 20 };
+  const strip = d3.select("#day-strip").attr("viewBox", `0 0 ${SW} ${SH}`);
+  const sx = d3.scaleLinear().domain([DAYS[0], DAYS.at(-1)]).range([sm.l, SW - sm.r]);
+  const sy = d3.scaleLinear().domain([0, 100]).range([SH - sm.b, sm.t]);
+  strip.append("rect").attr("x", sm.l).attr("y", sm.t).attr("width", SW - sm.l - sm.r)
+    .attr("height", SH - sm.t - sm.b).attr("fill", "#f4f3ee").attr("rx", 4);
+  for (const city of CITIES)
+    strip.append("path").attr("fill", "none").attr("stroke", COLOR[city]).attr("stroke-width", 2)
+      .attr("stroke-linejoin", "round").attr("d", d3.line().curve(d3.curveMonotoneX).x(d => sx(d.day)).y(d => sy(d[city]))(daily));
+  strip.selectAll("text.tick").data([1, 7, 14, 21, 30]).join("text").attr("class", "tick")
+    .attr("x", sx).attr("y", SH - 4).attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--muted)")
+    .text(d => d === 1 ? "Jun 1" : d);
+  const marker = strip.append("g").style("pointer-events", "none");
+  marker.append("line").attr("y1", sm.t - 2).attr("y2", SH - sm.b + 2).attr("stroke", "var(--ink)").attr("stroke-width", 2);
+  const markerDots = marker.selectAll("circle").data(CITIES).join("circle").attr("r", 4)
+    .attr("fill", c => COLOR[c]).attr("stroke", "#fff").attr("stroke-width", 1.5);
+
+  const pickDay = e => {
+    const [mx] = d3.pointer(e, strip.node());
+    return Math.max(DAYS[0], Math.min(DAYS.at(-1), Math.round(sx.invert(mx))));
+  };
+  strip.on("pointerdown", function (e) { this.setPointerCapture(e.pointerId); stop(); setState({ mode: pickDay(e) }); })
+    .on("pointermove", function (e) {
+      const day = pickDay(e), o = daily.find(d => d.day === day);
+      if (e.buttons) setState({ mode: day });
+      showTip(e, `<div class="t">June ${day}, 6 AM–noon</div>` + CITIES.map(c =>
+        `<span style="color:${COLOR[c]};font-weight:600">${c}</span>: ${Math.round(o[c])}% cloudy`).join("<br>"));
+    })
+    .on("pointerleave", hideTip)
+    .on("keydown", e => {
+      const cur = state.mode === "avg" ? null : state.mode;
+      if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); setState({ mode: cur == null ? DAYS[0] : Math.min(DAYS.at(-1), cur + 1) }); }
+      if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); setState({ mode: cur == null ? DAYS.at(-1) : Math.max(DAYS[0], cur - 1) }); }
+    });
+  d3.select("#prev-day").on("click", () => setState({ mode: state.mode === "avg" ? DAYS.at(-1) : Math.max(DAYS[0], state.mode - 1) }));
+  d3.select("#next-day").on("click", () => setState({ mode: state.mode === "avg" ? DAYS[0] : Math.min(DAYS.at(-1), state.mode + 1) }));
+  d3.select("#avg-btn").on("click", () => setState({ mode: "avg" }));
+
+  const fmtDay = day => new Date(Date.UTC(2025, 5, day)).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  function updateDayPicker() {
+    const isAvg = state.mode === "avg";
+    d3.select("#avg-btn").attr("aria-pressed", String(isAvg));
+    marker.style("opacity", isAvg ? 0 : 1);
+    if (!isAvg) {
+      const o = daily.find(d => d.day === state.mode);
+      marker.select("line").attr("x1", sx(state.mode)).attr("x2", sx(state.mode));
+      markerDots.attr("cx", sx(state.mode)).attr("cy", c => sy(o[c]));
+    }
+    strip.attr("aria-valuenow", isAvg ? null : state.mode).attr("aria-valuetext", isAvg ? "June average" : fmtDay(state.mode));
+    d3.select("#day-readout").text(isAvg ? "All June" : fmtDay(state.mode));
+  }
   const slider = d3.select("#slot").on("input", function () { stop(); setState({ slot: +this.value }); });
 
   let timer = null;
@@ -511,7 +611,7 @@ function drawExplorer(meta, bits, us) {
     Object.assign(state, patch);
     slider.property("value", state.slot);
     d3.select("#time-readout").text(slotLabel(state.slot));
-    daysEl.selectAll("button").attr("aria-pressed", function () { return String(this.dataset.mode == state.mode); });
+    updateDayPicker();
     d3.select("#key-right").text(state.mode === "avg" ? "Cloudy on every June day at this hour" : "Cloudy");
     renderMap(); updateChart();
   }
