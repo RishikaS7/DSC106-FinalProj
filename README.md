@@ -1,4 +1,4 @@
-# ☀️ Who Gets the Sun First?
+# ☀️ Who Gets the Sun First? ☀️
 
 **An explorable explanation of California's "June Gloom," San Francisco vs. San Diego**
 
