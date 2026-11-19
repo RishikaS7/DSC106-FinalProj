@@ -1,662 +1,1276 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Who Gets the Sun First?</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-<style>
-  :root {
-    --page: #fbfaf7; --surface: #ffffff;
-    --ink: #121212; --ink2: #4a4945; --muted: #85837c;
-    --rule: #e4e2da; --grid: #e7e5de; --axis: #c3c2b7;
-    --sf: #2a78d6; --sd: #eb6834;
-    --ocean: #1b3550; --land: #55604c; --night: #efeee9;
-    --serif: "Source Serif 4", Georgia, serif;
-    --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--serif);
-         font-size: 19px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Who Gets the Sun First?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+  <link rel="stylesheet" href="natalie-vis/first-sun.css">
+  <style>
+    :root {
+      --page: #fbfaf7;
+      --surface: #ffffff;
+      --ink: #121212;
+      --ink2: #4a4945;
+      --muted: #85837c;
+      --rule: #e4e2da;
+      --grid: #e7e5de;
+      --axis: #c3c2b7;
+      --sf: #2a78d6;
+      --sd: #eb6834;
+      --ocean: #1b3550;
+      --land: #55604c;
+      --night: #efeee9;
+      --serif: "Source Serif 4", Georgia, serif;
+      --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
 
-  /* ---------- article layout ---------- */
-  .prose { max-width: 680px; margin: 0 auto; padding: 0 16px; }
-  .figure { max-width: 940px; margin: 36px auto 44px; padding: 0 16px; }
-  header.hero { max-width: 760px; margin: 0 auto; padding: 72px 16px 28px; text-align: center; }
-  .kicker { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .08em;
-            text-transform: uppercase; color: var(--sd); margin: 0 0 14px; }
-  h1 { font-size: clamp(38px, 6vw, 58px); line-height: 1.05; margin: 0 0 18px; font-weight: 700; letter-spacing: -0.01em; }
-  .dek { font-size: 22px; line-height: 1.45; color: var(--ink2); margin: 0 0 22px; }
-  .byline { font-family: var(--sans); font-size: 14px; color: var(--muted); margin: 0; }
-  .byline b { color: var(--ink2); font-weight: 600; }
-  hr.rule { border: 0; border-top: 1px solid var(--rule); max-width: 680px; margin: 36px auto; }
-  h2 { font-size: 30px; line-height: 1.2; margin: 56px 0 6px; }
-  /* section headers: big number + label, with a rule above */
-  .part-head { display: flex; align-items: baseline; gap: 14px; border-top: 2px solid var(--ink);
-               padding-top: 14px; margin: 88px 0 0; font-family: var(--sans); }
-  .part-head .num { font-size: 44px; font-weight: 700; line-height: 1; color: var(--sd); font-variant-numeric: tabular-nums; }
-  .part-head .label { font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
-  .part-head + h2 { margin-top: 18px; }
-  .part-head.todo { border-top-color: var(--axis); }
-  .part-head.todo .num, .part-head.todo .label { color: var(--axis); }
-  p { margin: 0 0 20px; }
-  .lead::first-letter { float: left; font-size: 66px; line-height: .9; padding: 6px 8px 0 0; font-weight: 700; }
-  em { font-style: italic; }
-  .sf-text { color: var(--sf); font-weight: 600; } .sd-text { color: var(--sd); font-weight: 600; }
+    * {
+      box-sizing: border-box;
+    }
 
-  /* inline links that drive the visualization */
-  button.go { font: inherit; color: inherit; background: none; border: 0; padding: 0 1px; cursor: pointer;
-              border-bottom: 2px solid var(--sd); background: linear-gradient(transparent 62%, rgba(235,104,52,.16) 0); }
-  button.go:hover { background: rgba(235,104,52,.22); }
-  button.go:focus-visible { outline: 2px solid var(--sf); outline-offset: 2px; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 19px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
 
-  /* ---------- figure chrome ---------- */
-  .fig-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 22px 22px 16px;
-              font-family: var(--sans); font-size: 14px; line-height: 1.5; }
-  .fig-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
-  .fig-sub { color: var(--ink2); margin: 0 0 14px; }
-  .fig-note { font-family: var(--sans); font-size: 13px; color: var(--muted); margin: 10px 4px 0; line-height: 1.5; }
-  .legend { display: flex; gap: 18px; font-size: 13px; color: var(--ink2); margin-bottom: 4px; flex-wrap: wrap; }
-  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px;
-                         border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
-  svg { display: block; width: 100%; height: auto; overflow: visible; }
-  .axis text { fill: var(--muted); font-size: 12px; font-family: var(--sans); }
-  .axis path, .axis line { stroke: var(--axis); }
-  .grid line { stroke: var(--grid); } .grid path { display: none; }
-  .axis-label { fill: var(--ink2); font-size: 12px; }
-  .direct-label { font-size: 13px; font-weight: 600; }
-  .note-label { fill: var(--muted); font-size: 11.5px; }
+    /* ---------- article layout ---------- */
+    .prose {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
 
-  .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 6px 0 10px; }
-  .play { border: 0; background: var(--ink); color: #fff; border-radius: 999px;
-          width: 38px; height: 38px; font-size: 14px; cursor: pointer; flex: none; }
-  .play:focus-visible, .chip:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--sf); outline-offset: 2px; }
-  .time-readout { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 20px; min-width: 82px; }
-  input[type=range] { flex: 1; min-width: 160px; accent-color: var(--ink); }
-  /* day picker: one draggable strip chart instead of 30 buttons */
-  .day-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 16px; }
-  .chip { border: 1px solid rgba(11,11,11,0.16); background: var(--surface); color: var(--ink2);
-          border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 14px; cursor: pointer; }
-  .chip[aria-pressed=true] { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .or { font-size: 12px; color: var(--muted); }
-  .strip-wrap { flex: 1 1 100%; display: flex; align-items: center; gap: 4px; }
-  .nudge { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--ink2); cursor: pointer;
-           padding: 4px 6px; border-radius: 6px; }
-  .nudge:hover { background: #f0eee8; }
-  #day-strip { flex: 1; min-width: 0; cursor: pointer; touch-action: none; }
-  #day-strip:focus-visible { outline: 2px solid var(--sf); outline-offset: 2px; border-radius: 4px; }
-  .day-readout { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 14px; min-width: 64px; }
-  .map-wrap { position: relative; max-width: 620px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: var(--ocean); }
-  .map-wrap canvas { display: block; width: 100%; height: auto; }
-  .map-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .map-label { fill: #fff; font-size: 13px; font-weight: 600; paint-order: stroke; stroke: rgba(0,0,0,0.6); stroke-width: 3px; }
-  .map-note { fill: rgba(255,255,255,0.92); font-size: 12px; font-style: italic; paint-order: stroke;
-              stroke: rgba(20,40,60,0.6); stroke-width: 3px; }
-  .map-key { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px;
-             color: var(--ink2); margin: 8px 0 14px; flex-wrap: wrap; }
-  .map-key .ramp { width: 140px; height: 10px; border-radius: 3px; background: linear-gradient(to right, var(--land), #fff); }
-  .caption { font-size: 15px; margin: 6px 0 14px; min-height: 2.6em; }
-  .caption b.sf { color: var(--sf); } .caption b.sd { color: var(--sd); }
+    .figure {
+      max-width: 940px;
+      margin: 36px auto 44px;
+      padding: 0 16px;
+    }
 
-  .tooltip { position: fixed; pointer-events: none; background: var(--surface); font-family: var(--sans);
-             border: 1px solid rgba(11,11,11,0.12); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-             padding: 8px 10px; font-size: 13px; line-height: 1.5; opacity: 0; transition: opacity .1s; z-index: 5; }
-  .tooltip .t { font-weight: 600; margin-bottom: 2px; }
+    header.hero {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 72px 16px 28px;
+      text-align: center;
+    }
 
-  /* placeholder for teammates' sections */
-  .placeholder { border: 1.5px dashed var(--axis); border-radius: 12px; padding: 22px; margin: 28px 0;
-                 font-family: var(--sans); font-size: 14px; color: var(--muted); text-align: center; }
+    .kicker {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--sd);
+      margin: 0 0 14px;
+    }
 
-  /* prototype write-up */
-  .writeup { background: #f3f1ea; border-top: 1px solid var(--rule); margin-top: 80px; padding: 8px 0 40px; }
-  .writeup h2 { font-size: 26px; }
-  .writeup h3 { font-family: var(--sans); font-size: 16px; margin: 28px 0 8px; }
-  .writeup .who { font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .06em;
-                  text-transform: uppercase; color: var(--muted); margin: 14px 0 4px; }
-  .writeup p { font-size: 17px; }
-  footer { font-family: var(--sans); font-size: 12.5px; color: var(--muted); line-height: 1.6; padding: 28px 16px 60px; }
-  #error { color: #b42318; }
-  code { font-size: .85em; background: #ece9e0; padding: 1px 5px; border-radius: 4px; }
+    h1 {
+      font-size: clamp(38px, 6vw, 58px);
+      line-height: 1.05;
+      margin: 0 0 18px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
 
-  #marcus-chart g[tabindex]:focus { outline: none; }
-  #marcus-chart g[tabindex]:focus-visible .row-bg { stroke: #202c39; stroke-width: 1.5; }
-  #marcus-detail { min-height: 3em; font-size: 13px; color: #4a4945; }
-  #marcus-summary { font-variant-numeric: tabular-nums; }
-  #marcus-play:disabled { opacity: .45; cursor: wait; }
-  .marcus-key { display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:#4a4945; margin: 0 0 12px; }
-  .marcus-key span::before { content:""; display:inline-block; width:12px; height:12px; margin-right:6px; vertical-align:-1px; background:var(--key); border-radius:2px; }
-  .marcus-key .marcus-tie::before { width:6px; height:6px; border-radius:50%; vertical-align:1px; }
-  .marcus-tooltip { position:fixed; z-index:20; pointer-events:none; max-width:min(310px, calc(100vw - 24px)); padding:10px 12px; background:#fff; color:#202c39; border:1px solid #d4d8da; border-radius:8px; box-shadow:0 4px 16px #0002; font:13px/1.6 system-ui,sans-serif; }
-</style>
+    .dek {
+      font-size: 22px;
+      line-height: 1.45;
+      color: var(--ink2);
+      margin: 0 0 22px;
+    }
+
+    .byline {
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .byline b {
+      color: var(--ink2);
+      font-weight: 600;
+    }
+
+    hr.rule {
+      border: 0;
+      border-top: 1px solid var(--rule);
+      max-width: 680px;
+      margin: 36px auto;
+    }
+
+    h2 {
+      font-size: 30px;
+      line-height: 1.2;
+      margin: 56px 0 6px;
+    }
+
+    /* section headers: big number + label, with a rule above */
+    .part-head {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      border-top: 2px solid var(--ink);
+      padding-top: 14px;
+      margin: 88px 0 0;
+      font-family: var(--sans);
+    }
+
+    .part-head .num {
+      font-size: 44px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--sd);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .part-head .label {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .part-head+h2 {
+      margin-top: 18px;
+    }
+
+    .part-head.todo {
+      border-top-color: var(--axis);
+    }
+
+    .part-head.todo .num,
+    .part-head.todo .label {
+      color: var(--axis);
+    }
+
+    p {
+      margin: 0 0 20px;
+    }
+
+    .lead::first-letter {
+      float: left;
+      font-size: 66px;
+      line-height: .9;
+      padding: 6px 8px 0 0;
+      font-weight: 700;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    .sf-text {
+      color: var(--sf);
+      font-weight: 600;
+    }
+
+    .sd-text {
+      color: var(--sd);
+      font-weight: 600;
+    }
+
+    /* inline links that drive the visualization */
+    button.go {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: 0;
+      padding: 0 1px;
+      cursor: pointer;
+      border-bottom: 2px solid var(--sd);
+      background: linear-gradient(transparent 62%, rgba(235, 104, 52, .16) 0);
+    }
+
+    button.go:hover {
+      background: rgba(235, 104, 52, .22);
+    }
+
+    button.go:focus-visible {
+      outline: 2px solid var(--sf);
+      outline-offset: 2px;
+    }
+
+    /* ---------- figure chrome ---------- */
+    .fig-card {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 12px;
+      padding: 22px 22px 16px;
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .fig-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+
+    .fig-sub {
+      color: var(--ink2);
+      margin: 0 0 14px;
+    }
+
+    .fig-note {
+      font-family: var(--sans);
+      font-size: 13px;
+      color: var(--muted);
+      margin: 10px 4px 0;
+      line-height: 1.5;
+    }
+
+    .legend {
+      display: flex;
+      gap: 18px;
+      font-size: 13px;
+      color: var(--ink2);
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      margin-right: 6px;
+      vertical-align: -1px;
+      background: var(--c);
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    .axis text {
+      fill: var(--muted);
+      font-size: 12px;
+      font-family: var(--sans);
+    }
+
+    .axis path,
+    .axis line {
+      stroke: var(--axis);
+    }
+
+    .grid line {
+      stroke: var(--grid);
+    }
+
+    .grid path {
+      display: none;
+    }
+
+    .axis-label {
+      fill: var(--ink2);
+      font-size: 12px;
+    }
+
+    .direct-label {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .note-label {
+      fill: var(--muted);
+      font-size: 11.5px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 6px 0 10px;
+    }
+
+    .play {
+      border: 0;
+      background: var(--ink);
+      color: #fff;
+      border-radius: 999px;
+      width: 38px;
+      height: 38px;
+      font-size: 14px;
+      cursor: pointer;
+      flex: none;
+    }
+
+    .play:focus-visible,
+    .chip:focus-visible,
+    input[type=range]:focus-visible {
+      outline: 2px solid var(--sf);
+      outline-offset: 2px;
+    }
+
+    .time-readout {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      font-size: 20px;
+      min-width: 82px;
+    }
+
+    input[type=range] {
+      flex: 1;
+      min-width: 160px;
+      accent-color: var(--ink);
+    }
+
+    /* day picker: one draggable strip chart instead of 30 buttons */
+    .day-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 2px 0 16px;
+    }
+
+    .chip {
+      border: 1px solid rgba(11, 11, 11, 0.16);
+      background: var(--surface);
+      color: var(--ink2);
+      border-radius: 999px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      cursor: pointer;
+    }
+
+    .chip[aria-pressed=true] {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+
+    .or {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .strip-wrap {
+      flex: 1 1 100%;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .nudge {
+      border: 0;
+      background: none;
+      font-size: 22px;
+      line-height: 1;
+      color: var(--ink2);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+    }
+
+    .nudge:hover {
+      background: #f0eee8;
+    }
+
+    #day-strip {
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    #day-strip:focus-visible {
+      outline: 2px solid var(--sf);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    .day-readout {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      font-size: 14px;
+      min-width: 64px;
+    }
+
+    .map-wrap {
+      position: relative;
+      max-width: 620px;
+      margin: 0 auto;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--ocean);
+    }
+
+    .map-wrap canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .map-wrap svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-label {
+      fill: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      paint-order: stroke;
+      stroke: rgba(0, 0, 0, 0.6);
+      stroke-width: 3px;
+    }
+
+    .map-note {
+      fill: rgba(255, 255, 255, 0.92);
+      font-size: 12px;
+      font-style: italic;
+      paint-order: stroke;
+      stroke: rgba(20, 40, 60, 0.6);
+      stroke-width: 3px;
+    }
+
+    .map-key {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--ink2);
+      margin: 8px 0 14px;
+      flex-wrap: wrap;
+    }
+
+    .map-key .ramp {
+      width: 140px;
+      height: 10px;
+      border-radius: 3px;
+      background: linear-gradient(to right, var(--land), #fff);
+    }
+
+    .caption {
+      font-size: 15px;
+      margin: 6px 0 14px;
+      min-height: 2.6em;
+    }
+
+    .caption b.sf {
+      color: var(--sf);
+    }
+
+    .caption b.sd {
+      color: var(--sd);
+    }
+
+    .tooltip {
+      position: fixed;
+      pointer-events: none;
+      background: var(--surface);
+      font-family: var(--sans);
+      border: 1px solid rgba(11, 11, 11, 0.12);
+      border-radius: 8px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      opacity: 0;
+      transition: opacity .1s;
+      z-index: 5;
+    }
+
+    .tooltip .t {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    /* placeholder for teammates' sections */
+    .placeholder {
+      border: 1.5px dashed var(--axis);
+      border-radius: 12px;
+      padding: 22px;
+      margin: 28px 0;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* prototype write-up */
+    .writeup {
+      background: #f3f1ea;
+      border-top: 1px solid var(--rule);
+      margin-top: 80px;
+      padding: 8px 0 40px;
+    }
+
+    .writeup h2 {
+      font-size: 26px;
+    }
+
+    .writeup h3 {
+      font-family: var(--sans);
+      font-size: 16px;
+      margin: 28px 0 8px;
+    }
+
+    .writeup .who {
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 14px 0 4px;
+    }
+
+    .writeup p {
+      font-size: 17px;
+    }
+
+    footer {
+      font-family: var(--sans);
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.6;
+      padding: 28px 16px 60px;
+    }
+
+    #error {
+      color: #b42318;
+    }
+
+    code {
+      font-size: .85em;
+      background: #ece9e0;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    #marcus-chart g[tabindex]:focus {
+      outline: none;
+    }
+
+    #marcus-chart g[tabindex]:focus-visible .row-bg {
+      stroke: #202c39;
+      stroke-width: 1.5;
+    }
+
+    #marcus-detail {
+      min-height: 3em;
+      font-size: 13px;
+      color: #4a4945;
+    }
+
+    #marcus-summary {
+      font-variant-numeric: tabular-nums;
+    }
+
+    #marcus-play:disabled {
+      opacity: .45;
+      cursor: wait;
+    }
+
+    .marcus-key {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: #4a4945;
+      margin: 0 0 12px;
+    }
+
+    .marcus-key span::before {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 6px;
+      vertical-align: -1px;
+      background: var(--key);
+      border-radius: 2px;
+    }
+
+    .marcus-key .marcus-tie::before {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      vertical-align: 1px;
+    }
+
+    .marcus-tooltip {
+      position: fixed;
+      z-index: 20;
+      pointer-events: none;
+      max-width: min(310px, calc(100vw - 24px));
+      padding: 10px 12px;
+      background: #fff;
+      color: #202c39;
+      border: 1px solid #d4d8da;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px #0002;
+      font: 13px/1.6 system-ui, sans-serif;
+    }
+
+    /* Natalie's first-sun map: borrow the article's palette */
+    #first-sun.fs-root {
+      --fs-ink: var(--ink);
+      --fs-muted: var(--ink2);
+      --fs-line: var(--rule);
+      --fs-accent: var(--ink);
+    }
+  </style>
 </head>
+
 <body>
 
-<header class="hero">
-  <p class="kicker">DSC 106 · An explorable explanation</p>
-  <h1>Who Gets the Sun First?</h1>
-  <p class="dek">Every June, a gray lid of cloud slides over the California coast. We followed it hour by hour
-    from space to find out whether San Francisco or San Diego really gets more "June Gloom."</p>
-  <p class="byline">By <b>Rishika Sahu</b>, <b>Natalie Wu</b>, <b>Marcus de Ramos</b> and <b>Yagnasri Chilukuri</b></p>
-</header>
+  <header class="hero">
+    <p class="kicker">DSC 106 · An explorable explanation</p>
+    <h1>Who Gets the Sun First?</h1>
+    <p class="dek">Every June, a gray lid of cloud slides over the California coast. We followed it hour by hour
+      from space to find out whether San Francisco or San Diego really gets more "June Gloom."</p>
+    <p class="byline">By <b>Rishika Sahu</b>, <b>Natalie Wu</b>, <b>Marcus de Ramos</b> and <b>Yagnasri Chilukuri</b>
+    </p>
+  </header>
 
-<div class="prose">
-  <p class="lead">Ask anyone who has spent a June in California and they will tell you the same thing: the beach
-    is gray in the morning. Tourists expect sunshine. Locals have a name for what they actually get instead: <em>June Gloom</em>.
-    The usual story says it is a Northern California problem, the fog rolling in under the Golden Gate Bridge.
-    But San Diegans swear their mornings are just as gray. So which city actually spends more of June under cloud,
-    and when does each one finally see the sun?</p>
-</div>
+  <div class="prose">
+    <p class="lead">Ask anyone who has spent a June in California and they will tell you the same thing: the beach
+      is gray in the morning. Tourists expect sunshine. Locals have a name for what they actually get instead: <em>June
+        Gloom</em>.
+      The usual story says it is a Northern California problem, the fog rolling in under the Golden Gate Bridge.
+      But San Diegans swear their mornings are just as gray. So which city actually spends more of June under cloud,
+      and when does each one finally see the sun?</p>
+  </div>
 
-<!-- =====================================================================
+  <!-- =====================================================================
      SECTION: Rishika: the view from space
      ===================================================================== -->
-<section id="view-from-space">
-  <div class="prose">
-    <div class="part-head"><span class="num">01</span><span class="label">The view from space</span></div>
-    <h2>A cloud the size of a state, parked just offshore</h2>
-    <p>The gloom has a technical name: the <em>marine layer</em>. Cold ocean water chills the air sitting right
-      on top of it, and a warm layer of air higher up acts like a lid, trapping that cool, moist air near the surface.
-      The result is a flat sheet of low stratus cloud that can stretch hundreds of miles out to sea.</p>
-    <p>NOAA's GOES-18 weather satellite photographs the West Coast every few minutes and labels each 2-km pixel as
-      cloudy or clear. We took one scan every hour in June 2025, from 10 PM through noon the next day. Press
-      play below and watch where the cloud lives.</p>
-  </div>
-
-  <div class="figure">
-    <div class="fig-card" id="map-card">
-      <p class="fig-title">The marine layer, hour by hour</p>
-      <p class="fig-sub">Drag the hour slider or press play. Keep <b>June average</b> to see how often each spot was cloudy
-        at that hour, or drag across the day strip to see one real morning. The strip's lines show each day's
-        6 AM–noon cloud cover, so the spikes are the gloomiest days. Hover the map to read any location.</p>
-      <div class="controls">
-        <button class="play" id="play" aria-label="Play animation">▶</button>
-        <span class="time-readout" id="time-readout">6 AM</span>
-        <input type="range" id="slot" min="0" max="14" step="1" value="8" aria-label="Hour of day (PDT)">
-      </div>
-      <div class="day-row">
-        <button class="chip" id="avg-btn" aria-pressed="true">June average</button>
-        <span class="or">or drag across the strip to pick a day:</span>
-        <span class="day-readout" id="day-readout">All June</span>
-        <div class="strip-wrap">
-          <button class="nudge" id="prev-day" aria-label="Previous day">‹</button>
-          <svg id="day-strip" tabindex="0" role="slider" aria-label="Day of June 2025"
-               aria-valuemin="1" aria-valuemax="30"></svg>
-          <button class="nudge" id="next-day" aria-label="Next day">›</button>
-        </div>
-      </div>
-      <div class="map-wrap"><canvas id="map"></canvas><svg id="map-overlay"></svg></div>
-      <div class="map-key"><span>Clear</span><span class="ramp"></span><span id="key-right">Cloudy on every June day at this hour</span></div>
-      <p class="caption" id="caption"></p>
-      <div class="legend">
-        <span style="--c: var(--sf)">San Francisco coast</span>
-        <span style="--c: var(--sd)">San Diego coast</span>
-        <span id="avg-legend" style="--c: transparent; display:none">- - - June average</span>
-      </div>
-      <svg id="box-chart"></svg>
-      <p id="error" role="alert"></p>
+  <section id="view-from-space">
+    <div class="prose">
+      <div class="part-head"><span class="num">01</span><span class="label">The view from space</span></div>
+      <h2>A cloud the size of a state, parked just offshore</h2>
+      <p>The gloom has a technical name: the <em>marine layer</em>. Cold ocean water chills the air sitting right
+        on top of it, and a warm layer of air higher up acts like a lid, trapping that cool, moist air near the surface.
+        The result is a flat sheet of low stratus cloud that can stretch hundreds of miles out to sea.</p>
+      <p>NOAA's GOES-18 weather satellite photographs the West Coast every few minutes and labels each 2-km pixel as
+        cloudy or clear. We took one scan every hour in June 2025, from 10 PM through noon the next day. Press
+        play below and watch where the cloud lives.</p>
     </div>
-    <p class="fig-note">Source: NOAA GOES-18 ABI Level-2 Clear Sky Mask, one scan per hour, June 2025, regridded to 0.03° (~3 km) and
-      lightly smoothed for display; percentages use the unsmoothed pixels.
-      Boxes mark the coastal land we measure for each city. Times are Pacific Daylight Time.</p>
-  </div>
 
-  <div class="prose">
-    <p>Three things jump out. First, the ocean is almost always white. Out past the coastline, the stratus deck
-      sits there nearly every hour of every day. Second, inland California is almost always clear: the
-      marine layer is shallow, and the coastal mountains stop it cold. The whole fight happens in a thin strip
-      along the shore, which is exactly where people live.</p>
-    <p>Third, the average hides a lot. On the <button class="go" data-day="avg" data-slot="8">average June morning at 6 AM</button>,
-      only about a quarter to a third of each city's coast is under cloud, a gentle-looking gloom. But
-      individual days are rarely average. On <button class="go" data-day="14" data-slot="8">June 14 at 6 AM</button>, a swirl of
-      cloud filled the Southern California Bight and buried 91% of <span class="sd-text">San Diego</span>'s coast,
-      versus 58% of <span class="sf-text">San Francisco</span>'s. One hour later,
-      <button class="go" data-day="14" data-slot="9">at 7 AM</button>, San Francisco's coast was completely clear.
-      San Diego's was still mostly gray.</p>
-    <p>Look at the line chart under the map with June average selected and the pattern holds: after sunrise,
-      <span class="sd-text">San Diego</span> stays a few points cloudier than <span class="sf-text">San Francisco</span>
-      at every hour until noon. The gloom is not a Bay Area problem. If anything, it is San Diego's.</p>
-    <p>One caution: the shaded hours before sunrise (about 5:45 AM) are harder to trust. At night the satellite
-      cannot use visible light, and low fog looks a lot like the cold ocean in infrared, so those readings swing more
-      than the real clouds probably do. Compare <button class="go" data-day="avg" data-slot="3">1 AM</button> with
-      <button class="go" data-day="avg" data-slot="11">9 AM</button> to see the difference in how sharp the picture is.</p>
-  </div>
-</section>
+    <div class="figure">
+      <div class="fig-card" id="map-card">
+        <p class="fig-title">The marine layer, hour by hour</p>
+        <p class="fig-sub">Drag the hour slider or press play. Keep <b>June average</b> to see how often each spot was
+          cloudy
+          at that hour, or drag across the day strip to see one real morning. The strip's lines show each day's
+          6 AM–noon cloud cover, so the spikes are the gloomiest days. Hover the map to read any location.</p>
+        <div class="controls">
+          <button class="play" id="play" aria-label="Play animation">▶</button>
+          <span class="time-readout" id="time-readout">6 AM</span>
+          <input type="range" id="slot" min="0" max="14" step="1" value="8" aria-label="Hour of day (PDT)">
+        </div>
+        <div class="day-row">
+          <button class="chip" id="avg-btn" aria-pressed="true">June average</button>
+          <span class="or">or drag across the strip to pick a day:</span>
+          <span class="day-readout" id="day-readout">All June</span>
+          <div class="strip-wrap">
+            <button class="nudge" id="prev-day" aria-label="Previous day">‹</button>
+            <svg id="day-strip" tabindex="0" role="slider" aria-label="Day of June 2025" aria-valuemin="1"
+              aria-valuemax="30"></svg>
+            <button class="nudge" id="next-day" aria-label="Next day">›</button>
+          </div>
+        </div>
+        <div class="map-wrap"><canvas id="map"></canvas><svg id="map-overlay"></svg></div>
+        <div class="map-key"><span>Clear</span><span class="ramp"></span><span id="key-right">Cloudy on every June day
+            at this hour</span></div>
+        <p class="caption" id="caption"></p>
+        <div class="legend">
+          <span style="--c: var(--sf)">San Francisco coast</span>
+          <span style="--c: var(--sd)">San Diego coast</span>
+          <span id="avg-legend" style="--c: transparent; display:none">- - - June average</span>
+        </div>
+        <svg id="box-chart"></svg>
+        <p id="error" role="alert"></p>
+      </div>
+      <p class="fig-note">Source: NOAA GOES-18 ABI Level-2 Clear Sky Mask, one scan per hour, June 2025, regridded to
+        0.03° (~3 km) and
+        lightly smoothed for display; percentages use the unsmoothed pixels.
+        Boxes mark the coastal land we measure for each city. Times are Pacific Daylight Time.</p>
+    </div>
 
-<!-- =====================================================================
+    <div class="prose">
+      <p>Three things jump out. First, the ocean is almost always white. Out past the coastline, the stratus deck
+        sits there nearly every hour of every day. Second, inland California is almost always clear: the
+        marine layer is shallow, and the coastal mountains stop it cold. The whole fight happens in a thin strip
+        along the shore, which is exactly where people live.</p>
+      <p>Third, the average hides a lot. On the <button class="go" data-day="avg" data-slot="8">average June morning at
+          6 AM</button>,
+        only about a quarter to a third of each city's coast is under cloud, a gentle-looking gloom. But
+        individual days are rarely average. On <button class="go" data-day="14" data-slot="8">June 14 at 6 AM</button>,
+        a swirl of
+        cloud filled the Southern California Bight and buried 91% of <span class="sd-text">San Diego</span>'s coast,
+        versus 58% of <span class="sf-text">San Francisco</span>'s. One hour later,
+        <button class="go" data-day="14" data-slot="9">at 7 AM</button>, San Francisco's coast was completely clear.
+        San Diego's was still mostly gray.
+      </p>
+      <p>Look at the line chart under the map with June average selected and the pattern holds: after sunrise,
+        <span class="sd-text">San Diego</span> stays a few points cloudier than <span class="sf-text">San
+          Francisco</span>
+        at every hour until noon. The gloom is not a Bay Area problem. If anything, it is San Diego's.
+      </p>
+      <p>One caution: the shaded hours before sunrise (about 5:45 AM) are harder to trust. At night the satellite
+        cannot use visible light, and low fog looks a lot like the cold ocean in infrared, so those readings swing more
+        than the real clouds probably do. Compare <button class="go" data-day="avg" data-slot="3">1 AM</button> with
+        <button class="go" data-day="avg" data-slot="11">9 AM</button> to see the difference in how sharp the picture
+        is.
+      </p>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+     SECTION: Natalie: first sun
+     ===================================================================== -->
+  <section id="part-2">
+    <div class="prose">
+      <div class="part-head"><span class="num">02</span><span class="label">First sun</span></div>
+      <h2>When does the coast finally see the sun?</h2>
+      <p>Part 1 showed how cloudy each coast is at a given hour. But an average cloud map hides the thing you
+        actually care about: when to go outside. So we flip the question. Instead of asking how cloudy it is at 8 AM,
+        we ask when each spot first becomes sunny, and color it by that hour, from warm yellow for early to deep indigo
+        for late.</p>
+      <p>"Sunny" is a judgment call, so the map lets you change it. Start with
+        <button class="go" data-fs-day="14">June 14</button>, the morning a swirl of cloud buried San Diego, then slide
+        through the other days of June. Or switch to the <button class="go" data-fs-day="avg">June average</button>
+        and raise or lower how cloudy a spot can be and still count as sunny. Hover any spot to see its whole morning.
+      </p>
+    </div>
+    <div class="figure">
+      <div class="fig-card" id="first-sun-card">
+        <p class="fig-title">When does each coast first see the sun?</p>
+        <p class="fig-sub">Each spot is colored by the hour the sun likely breaks through. The dashed boxes are the
+          coastal land we use for each city's time.</p>
+        <div id="first-sun"></div>
+      </div>
+      <p class="fig-note">Source: NOAA GOES-18 ABI Level-2 Clear Sky Mask, one scan per hour, June 2025, regridded to
+        0.03° (~3 km).
+        First sun is interpolated between hourly scans. Times are Pacific Daylight Time.</p>
+    </div>
+  </section>
+  <script type="module">
+    import { loadFirstSunData } from './natalie-vis/first-sun-data.js';
+    import { initFirstSun } from './natalie-vis/first-sun.js';
+
+    const root = document.querySelector('#first-sun');
+    try {
+      const us = await d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/states-10m.json');
+      const basemap = topojson.feature(us, us.objects.states);
+      const data = await loadFirstSunData('natalie-vis/data/firstsun');
+      const firstSun = initFirstSun(root, data, { basemap });
+
+      // inline phrases in the text drive the map, like Part 1
+      document.querySelectorAll('#part-2 button.go').forEach(btn => btn.addEventListener('click', () => {
+        const d = btn.dataset.fsDay;
+        if (d === 'avg') root.querySelector('input[value="avg"]').click();
+        else firstSun.showDay(+d - 1);
+        const card = document.getElementById('first-sun-card').getBoundingClientRect();
+        if (card.top < 0 || card.top > window.innerHeight * 0.4)
+          document.getElementById('first-sun-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+    } catch (err) {
+      console.error(err);
+      root.innerHTML = `<p class="fs-error"><strong>The first-sun map could not load.</strong> ${err.message}. If you opened this file directly, serve the folder instead (python3 -m http.server).</p>`;
+    }
+  </script>
+
+  <section id="part-3">
+    <div class="prose">
+      <div class="part-head"><span class="num">03</span><span class="label">Day by day</span></div>
+      <h2>Which city is actually cloudier day to day?</h2>
+      <p>Looking at the monthly average does not tell us what happened on each day. At noon, San Francisco was cloudier
+        on more days, but San Diego had a slightly higher average cloud cover of 21.4% compared with 20.7% in San
+        Francisco. That’s because the average depends on how big the differences were, not just which city was cloudier
+        more often.</p>
+      <p>Press play or move the slider to compare the cities from 6 AM to noon. Each bar represents one day. Blue means
+        San Francisco was cloudier, and orange means San Diego was cloudier. Longer bars show bigger differences. Hover
+        over a day to see the cloud cover for both cities.</p>
+    </div>
+    <div class="figure">
+      <div class="fig-card">
+        <p class="fig-title">Which city is cloudier on each day?</p>
+        <p class="fig-sub">Press play or move the slider to compare 6 AM–noon PDT. Hover, tap, or focus a day for exact
+          values.</p>
+        <div class="marcus-key" aria-label="Chart legend"><span style="--key:#2a78d6">SF cloudier</span><span
+            style="--key:#eb6834">SD cloudier</span><span class="marcus-tie" style="--key:#65717a">Dot at zero =
+            tie</span></div>
+        <div class="controls"><button id="marcus-play" class="play" type="button" aria-label="Play morning comparison"
+            aria-pressed="false" disabled>▶</button><label for="marcus-hour">Hour (PDT)</label>
+          <input id="marcus-hour" type="range" min="6" max="12" step="1" value="12">
+          <output id="marcus-hour-label" for="marcus-hour" class="time-readout">Noon</output>
+        </div>
+        <p id="marcus-summary" aria-live="polite"></p>
+        <svg id="marcus-chart" role="group" aria-label="Daily difference in San Diego minus San Francisco cloud cover"
+          viewBox="0 0 860 830">
+        </svg>
+        <p id="marcus-detail" aria-live="polite">Select a row to inspect a day.</p>
+        <p id="marcus-error" role="alert"></p>
+      </div>
+      <p class="fig-note">Source: NOAA GOES-18 coastal cloud-cover observations. Source hours are UTC; PDT = UTC−7.
+        This comparison focuses on 6 AM–noon PDT; see Part 1 for overnight patterns. Differences are SD minus SF in
+        percentage points. Percentages measure cloud cover, not exact clearing time.
+        Counts describe these 30 days and these study regions.</p>
+    </div>
+  </section>
+
+  <!-- =====================================================================
      TEAMMATE SECTIONS: replace each placeholder with your section.
      Wrap prose in <div class="prose">…</div> and visualizations in
      <div class="figure"><div class="fig-card">…</div></div> to match the article style.
      NOTE: the "hour" field in coastal_cloud_june2025.json is UTC. Use (hour - 7) for PDT.
      ===================================================================== -->
-<section id="part-2">
-  <div class="prose">
-    <div class="part-head todo"><span class="num">02</span><span class="label">Coming soon</span></div>
-    <div class="placeholder">Natalie's section goes here</div>
-  </div>
-</section>
+  <section id="part-4">
+    <div class="prose">
+      <div class="part-head todo"><span class="num">04</span><span class="label">Coming soon</span></div>
+      <div class="placeholder">Yagna's section goes here</div>
+    </div>
+  </section>
 
-<section id="part-3">
-  <div class="prose">
-    <div class="part-head"><span class="num">03</span><span class="label">Day by day</span></div>
-    <h2>Which city is actually cloudier day to day?</h2>
-    <p>Looking at the monthly average does not tell us what happened on each day. At noon, San Francisco was cloudier on more days, but San Diego had a slightly higher average cloud cover of 21.4% compared with 20.7% in San Francisco. That’s because the average depends on how big the differences were, not just which city was cloudier more often.</p>
-    <p>Press play or move the slider to compare the cities from 6 AM to noon. Each bar represents one day. Blue means San Francisco was cloudier, and orange means San Diego was cloudier. Longer bars show bigger differences. Hover over a day to see the cloud cover for both cities.</p>
-  </div>
-  <div class="figure"><div class="fig-card">
-    <p class="fig-title">Which city is cloudier on each day?</p>
-    <p class="fig-sub">Press play or move the slider to compare 6 AM–noon PDT. Hover, tap, or focus a day for exact values.</p>
-    <div class="marcus-key" aria-label="Chart legend"><span style="--key:#2a78d6">SF cloudier</span><span style="--key:#eb6834">SD cloudier</span><span class="marcus-tie" style="--key:#65717a">Dot at zero = tie</span></div>
-    <div class="controls"><button id="marcus-play" class="play" type="button" aria-label="Play morning comparison" aria-pressed="false" disabled>▶</button><label for="marcus-hour">Hour (PDT)</label>
-      <input id="marcus-hour" type="range" min="6" max="12" step="1" value="12">
-      <output id="marcus-hour-label" for="marcus-hour" class="time-readout">Noon</output></div>
-    <p id="marcus-summary" aria-live="polite"></p>
-    <svg id="marcus-chart" role="group" aria-label="Daily difference in San Diego minus San Francisco cloud cover" viewBox="0 0 860 830">
-    </svg>
-    <p id="marcus-detail" aria-live="polite">Select a row to inspect a day.</p>
-    <p id="marcus-error" role="alert"></p>
-  </div><p class="fig-note">Source: NOAA GOES-18 coastal cloud-cover observations. Source hours are UTC; PDT = UTC−7.
-    This comparison focuses on 6 AM–noon PDT; see Part 1 for overnight patterns. Differences are SD minus SF in percentage points. Percentages measure cloud cover, not exact clearing time.
-    Counts describe these 30 days and these study regions.</p></div>
-</section>
-
-<section id="part-4">
-  <div class="prose">
-    <div class="part-head todo"><span class="num">04</span><span class="label">Coming soon</span></div>
-    <div class="placeholder">Yagna's section goes here</div>
-  </div>
-</section>
-
-<!-- =====================================================================
+  <!-- =====================================================================
      PROTOTYPE WRITE-UP (required for the 11/18 milestone)
      Each teammate: add your own <p class="who">Name</p><p>…</p> under both questions.
      ===================================================================== -->
-<section class="writeup">
-  <div class="prose">
-    <h2>Prototype notes</h2>
+  <section class="writeup">
+    <div class="prose">
+      <h2>Prototype notes</h2>
 
-    <h3>What have we done so far?</h3>
-    <p class="who">Rishika · The view from space</p>
-    <p>I turned the raw GOES-18 Clear Sky Mask data (450 hourly satellite scans of California for June 2025) into
-      the interactive map in Part 1. A Python script (<code>rishika-vis/prepare_map_data.py</code>) regrids the
-      satellite pixels onto a regular 0.03° latitude-longitude grid and bit-packs every frame, so the whole month
-      loads in the browser as a single 3 MB file. Readers can play or scrub through the hours from 10 PM to noon,
-      switch between the June average and any single day, and hover anywhere on the map to read how often it was cloudy.
-      A linked line chart tracks the same coastal-land boxes the rest of our article uses, and clicking it moves the
-      map to that hour, while highlighted phrases in the text jump the map to specific moments worth seeing.
-      While building this, I found that the <code>hour</code> field in our shared JSON is in UTC, not Pacific time,
-      which means our data actually covers 1 AM to noon local time rather than 8 AM to 7 PM.</p>
+      <h3>What have we done so far?</h3>
+      <p class="who">Rishika · The view from space</p>
+      <p>I turned the raw GOES-18 Clear Sky Mask data (450 hourly satellite scans of California for June 2025) into
+        the interactive map in Part 1. A Python script (<code>rishika-vis/prepare_map_data.py</code>) regrids the
+        satellite pixels onto a regular 0.03° latitude-longitude grid and bit-packs every frame, so the whole month
+        loads in the browser as a single 3 MB file. Readers can play or scrub through the hours from 10 PM to noon,
+        switch between the June average and any single day, and hover anywhere on the map to read how often it was
+        cloudy.
+        A linked line chart tracks the same coastal-land boxes the rest of our article uses, and clicking it moves the
+        map to that hour, while highlighted phrases in the text jump the map to specific moments worth seeing.
+        While building this, I found that the <code>hour</code> field in our shared JSON is in UTC, not Pacific time,
+        which means our data actually covers 1 AM to noon local time rather than 8 AM to 7 PM.</p>
 
-    <p class="who">Marcus · Day by day</p>
-    <p>I made a bar chart that compares cloud cover in San Francisco and San Diego for each day in June.
-      You can move the slider or press play to see how the differences change from 6 AM to noon.
-      Hovering over a day shows the cloud cover for both cities and how far apart they were.
-      I also added a count of how many days each city was cloudier so it is easier to compare the daily results with the monthly average.</p>
+      <p class="who">Natalie · First sun</p>
+      <p>I built the map in Part 2, which shows when each spot on the coast first becomes sunny instead of how cloudy it
+        is at one hour.
+        San Francisco and San Diego sit side by side, each pixel is colored from warm yellow (early sun) to deep indigo
+        (late sun),
+        and thin lines mark each whole hour. Readers can slide through every day of June or switch to the June average,
+        change what counts
+        as "sunny" with a cloud-chance slider, and hover any spot to see its cloud chance hour by hour. A sentence above
+        the maps is rewritten
+        from the data each time, so it always states which coast sees the sun later and by how much. I also reworked the
+        drawing code
+        so the sliders and hover stay smooth, because computing a first-sun time for every pixel was making the page
+        lag.</p>
 
-    <h3>What will be most challenging to design, and why?</h3>
-    <p class="who">Rishika · The view from space</p>
-    <p>The hardest design problem is being honest about the night. Before about 5:45 AM, the satellite can only
-      use infrared channels, and low fog looks a lot like the cold ocean, so some of the biggest swings in our
-      data are probably sensor artifacts rather than real weather. We need an encoding, whether shading,
-      annotation, or a confidence band, that tells readers this without burying the story. A second challenge is
-      that our data stops at noon, so any part of the article about afternoon clearing or sunsets will need new
-      downloads of the afternoon scans. Finally, we have to stitch four separately built sections into one article
-      that follows an and-but-therefore arc, which means agreeing on shared colors, city definitions, and a single
-      takeaway before the final deadline.</p>
-    <p class="who">Marcus · Day by day</p>
-    <p>I think the hardest part will be explaining why a city can have a higher average cloud cover but still be cloudier on fewer days.
-      The bars help show this because you can see both which city was cloudier and how big the difference was.
-      Another challenge is making all 30 days easy to read, especially on a smaller screen.
-      We also need to make sure our sections use the same time zone and study areas so we are making fair comparisons.</p>
-  </div>
-</section>
+      <p class="who">Marcus · Day by day</p>
+      <p>I made a bar chart that compares cloud cover in San Francisco and San Diego for each day in June.
+        You can move the slider or press play to see how the differences change from 6 AM to noon.
+        Hovering over a day shows the cloud cover for both cities and how far apart they were.
+        I also added a count of how many days each city was cloudier so it is easier to compare the daily results with
+        the monthly average.</p>
 
-<footer class="prose">
-  Data: NOAA GOES-18 ABI Level-2 Clear Sky Mask (ABI-L2-ACMC), June 2025. Satellite timestamps are UTC; all times
-  shown are PDT (UTC−7). "Coastal land" = land pixels inside each city's box (SF: 37.60–37.90°N, 122.35–122.55°W;
-  SD: 32.65–33.00°N, 117.10–117.30°W). Basemap: US Census via us-atlas. Built with D3.
-</footer>
+      <h3>What will be most challenging to design, and why?</h3>
+      <p class="who">Rishika · The view from space</p>
+      <p>The hardest design problem is being honest about the night. Before about 5:45 AM, the satellite can only
+        use infrared channels, and low fog looks a lot like the cold ocean, so some of the biggest swings in our
+        data are probably sensor artifacts rather than real weather. We need an encoding, whether shading,
+        annotation, or a confidence band, that tells readers this without burying the story. A second challenge is
+        that our data stops at noon, so any part of the article about afternoon clearing or sunsets will need new
+        downloads of the afternoon scans. Finally, we have to stitch four separately built sections into one article
+        that follows an and-but-therefore arc, which means agreeing on shared colors, city definitions, and a single
+        takeaway before the final deadline.</p>
+      <p class="who">Natalie · First sun</p>
+      <p>The hardest part is that "first sun" is not something the satellite measures directly. We have to define it
+        with a cloud-chance
+        threshold and interpolate between hourly scans, so the answer depends on choices we make. We need readers to
+        understand that
+        without burying them in method, which is why the threshold slider and the sentence above the maps matter so
+        much.
+        A second challenge is that the satellite is less reliable before sunrise, so the map starts looking for sun at 6
+        AM
+        and we have to keep that consistent with the shaded night hours in Part 1. Finally, we have to connect this map
+        to the rest of the story
+        so it helps answer which city really gets more June Gloom, rather than feeling like a separate tool.</p>
+      <p class="who">Marcus · Day by day</p>
+      <p>I think the hardest part will be explaining why a city can have a higher average cloud cover but still be
+        cloudier on fewer days.
+        The bars help show this because you can see both which city was cloudier and how big the difference was.
+        Another challenge is making all 30 days easy to read, especially on a smaller screen.
+        We also need to make sure our sections use the same time zone and study areas so we are making fair comparisons.
+      </p>
+    </div>
+  </section>
 
-<div class="tooltip" id="tip"></div>
+  <footer class="prose">
+    Data: NOAA GOES-18 ABI Level-2 Clear Sky Mask (ABI-L2-ACMC), June 2025. Satellite timestamps are UTC; all times
+    shown are PDT (UTC−7). "Coastal land" = land pixels inside each city's box (SF: 37.60–37.90°N, 122.35–122.55°W;
+    SD: 32.65–33.00°N, 117.10–117.30°W). Basemap: US Census via us-atlas. Built with D3.
+  </footer>
 
-<script>
-// =====================================================================
-// Rishika: satellite map + linked coastal-box chart (Part 1)
-// =====================================================================
-(() => {
-const DATA = "rishika-vis/";
-const CITIES = ["San Francisco", "San Diego"];
-const COLOR = { "San Francisco": "#2a78d6", "San Diego": "#eb6834" };
-const BOXES = {
-  "San Francisco": { latMin: 37.60, latMax: 37.90, lonMin: -122.55, lonMax: -122.35 },
-  "San Diego":     { latMin: 32.65, latMax: 33.00, lonMin: -117.30, lonMax: -117.10 },
-};
-const SUNRISE_SLOT = 7.75;              // ~5:45 AM PDT; slot 0 = 10 PM
-const tip = d3.select("#tip");
-const fmtHour = h => `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
-const slotToPdt = s => (22 + s) % 24;   // slot 0..14 -> 10 PM .. noon
-const slotLabel = s => slotToPdt(s) === 12 ? "Noon" : fmtHour(slotToPdt(s));
+  <div class="tooltip" id="tip"></div>
 
-function showTip(event, html) {
-  tip.html(html).style("opacity", 1);
-  const pad = 14, w = tip.node().offsetWidth, h = tip.node().offsetHeight;
-  let x = event.clientX + pad;
-  if (x + w > window.innerWidth - 8) x = event.clientX - w - pad;
-  tip.style("left", x + "px").style("top", Math.min(event.clientY + pad, window.innerHeight - h - 8) + "px");
-}
-const hideTip = () => tip.style("opacity", 0);
+  <script>
+    // =====================================================================
+    // Rishika: satellite map + linked coastal-box chart (Part 1)
+    // =====================================================================
+    (() => {
+      const DATA = "rishika-vis/";
+      const CITIES = ["San Francisco", "San Diego"];
+      const COLOR = { "San Francisco": "#2a78d6", "San Diego": "#eb6834" };
+      const BOXES = {
+        "San Francisco": { latMin: 37.60, latMax: 37.90, lonMin: -122.55, lonMax: -122.35 },
+        "San Diego": { latMin: 32.65, latMax: 33.00, lonMin: -117.30, lonMax: -117.10 },
+      };
+      const SUNRISE_SLOT = 7.75;              // ~5:45 AM PDT; slot 0 = 10 PM
+      const tip = d3.select("#tip");
+      const fmtHour = h => `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
+      const slotToPdt = s => (22 + s) % 24;   // slot 0..14 -> 10 PM .. noon
+      const slotLabel = s => slotToPdt(s) === 12 ? "Noon" : fmtHour(slotToPdt(s));
 
-Promise.all([
-  d3.json(DATA + "cloud_meta.json"),
-  fetch(DATA + "cloud_frames.bin").then(r => { if (!r.ok) throw Error(r.status); return r.arrayBuffer(); }),
-  d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/states-10m.json"),
-]).then(([meta, buf, us]) => drawExplorer(meta, new Uint8Array(buf), us))
-  .catch(e => d3.select("#error").text("Could not load map data. If you opened this file directly, " +
-    "serve the folder instead (python3 -m http.server). " + e));
-
-function drawExplorer(meta, bits, us) {
-  const { rows: R, cols: C, lat0, lon0, step, bytesPerFrame } = meta;
-  const N = R * C;
-
-  // ---- index frames by (day, slot) ----
-  const frames = meta.timesUTC.map((t, i) => {
-    const d = new Date(t);
-    return { i, day: d.getUTCDate(), slot: d.getUTCHours() - 5 };
-  }).filter(f => f.slot >= 0 && f.slot <= 14);
-  const DAYS = [...new Set(frames.map(f => f.day))].sort((a, b) => a - b);
-  const frameAt = new Map(frames.map(f => [`${f.day}|${f.slot}`, f.i]));
-  const bit = (fi, p) => (bits[fi * bytesPerFrame + (p >> 3)] >> (p & 7)) & 1;
-
-  const avg = d3.range(15).map(s => {
-    const out = new Float32Array(N), fs = frames.filter(f => f.slot === s);
-    for (const f of fs) {
-      const base = f.i * bytesPerFrame;
-      for (let p = 0; p < N; p++) out[p] += (bits[base + (p >> 3)] >> (p & 7)) & 1;
-    }
-    for (let p = 0; p < N; p++) out[p] /= fs.length;
-    return out;
-  });
-  const valueAt = (mode, s, p) => {
-    if (mode === "avg") return avg[s][p];
-    const fi = frameAt.get(`${mode}|${s}`);
-    return fi == null ? NaN : bit(fi, p);
-  };
-
-  // ---- coastal land cells inside each city's box ----
-  const land = topojson.feature(us, us.objects.nation);
-  const ca = topojson.feature(us, us.objects.states).features.find(f => f.id === "06");
-  const boxCells = {};
-  for (const city of CITIES) {
-    const b = BOXES[city], cells = [];
-    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
-      const la = lat0 - r * step, lo = lon0 + c * step;
-      if (la >= b.latMin && la <= b.latMax && lo >= b.lonMin && lo <= b.lonMax &&
-          d3.geoContains(ca, [lo, la])) cells.push(r * C + c);
-    }
-    boxCells[city] = cells;
-  }
-  const boxPct = (mode, s, city) => {
-    const v = boxCells[city].map(p => valueAt(mode, s, p));
-    return v.some(Number.isNaN) ? null : 100 * d3.mean(v);
-  };
-  const series = mode => CITIES.map(city => ({
-    city, values: d3.range(15).map(s => ({ slot: s, pct: boxPct(mode, s, city) })),
-  }));
-  const avgSeries = series("avg");
-
-  // ---- map ----
-  const W = 620;   // CSS width of the map
-  const edges = { W: lon0 - step / 2, E: lon0 + (C - 0.5) * step, N: lat0 + step / 2, S: lat0 - (R - 0.5) * step };
-  const bboxGeo = { type: "MultiPoint", coordinates: [[edges.W, edges.S], [edges.E, edges.N]] };
-  const proj = d3.geoMercator().fitWidth(W, bboxGeo);
-  const H = Math.round(d3.geoPath(proj).bounds(bboxGeo)[1][1]);
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const PW = Math.round(W * dpr), PH = Math.round(H * dpr);   // device pixels
-  const canvas = d3.select("#map").attr("width", PW).attr("height", PH).node();
-  const ctx = canvas.getContext("2d");
-  ctx.scale(dpr, dpr);
-  const path = d3.geoPath(proj, ctx);
-  const borders = topojson.mesh(us, us.objects.states, (a, b) => a !== b);
-
-  // Cloud layer is drawn at full device resolution. Each device pixel finds its fractional
-  // grid position (exact Mercator latitude) and bilinearly blends the 4 surrounding cells,
-  // so cloud edges are smooth instead of blocky squares.
-  const off = document.createElement("canvas"); off.width = PW; off.height = PH;
-  const offCtx = off.getContext("2d"), img = offCtx.createImageData(PW, PH);
-  for (let k = 0; k < img.data.length; k += 4) img.data[k] = img.data[k + 1] = img.data[k + 2] = 255;
-  const c0 = new Int32Array(PW), fx = new Float32Array(PW), r0 = new Int32Array(PH), fy = new Float32Array(PH);
-  for (let px = 0; px < PW; px++) {
-    const g = Math.max(0, Math.min(C - 1.001, (proj.invert([(px + 0.5) / dpr, H / 2])[0] - lon0) / step));
-    c0[px] = Math.floor(g); fx[px] = g - c0[px];
-  }
-  for (let py = 0; py < PH; py++) {
-    const g = Math.max(0, Math.min(R - 1.001, (lat0 - proj.invert([W / 2, (py + 0.5) / dpr])[1]) / step));
-    r0[py] = Math.floor(g); fy[py] = g - r0[py];
-  }
-  const A = new Float32Array(N), T = new Float32Array(N);
-  // light [1,2,1] blur so lone speckle pixels read as wisps, not hard dots
-  function soften(src) {
-    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
-      const i = r * C + c, l = c > 0 ? i - 1 : i, rr = c < C - 1 ? i + 1 : i;
-      T[i] = (src[l] + 2 * src[i] + src[rr]) / 4;
-    }
-    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
-      const i = r * C + c, u = r > 0 ? i - C : i, d = r < R - 1 ? i + C : i;
-      src[i] = (T[u] + 2 * T[i] + T[d]) / 4;
-    }
-  }
-
-  const ov = d3.select("#map-overlay").attr("viewBox", `0 0 ${W} ${H}`);
-  for (const city of CITIES) {
-    const b = BOXES[city];
-    const [x0, y0] = proj([b.lonMin, b.latMax]), [x1, y1] = proj([b.lonMax, b.latMin]);
-    for (const [stroke, sw] of [["#fff", 4], [COLOR[city], 2.2]])
-      ov.append("rect").attr("x", x0 - 3).attr("y", y0 - 3).attr("width", x1 - x0 + 6).attr("height", y1 - y0 + 6)
-        .attr("fill", "none").attr("stroke", stroke).attr("stroke-width", sw).attr("rx", 3);
-    const left = city === "San Diego";   // SD sits at the map's right edge
-    ov.append("text").attr("class", "map-label").attr("x", left ? x0 - 12 : x1 + 10)
-      .attr("text-anchor", left ? "end" : "start").attr("y", (y0 + y1) / 2).attr("dy", "0.35em").text(city);
-  }
-  const note = (lonlat, dy, text) => { const [x, y] = proj(lonlat);
-    ov.append("text").attr("class", "map-note").attr("x", x).attr("y", y + dy).attr("text-anchor", "middle").text(text); };
-  note([-123.1, 34.4], 0, "Pacific Ocean");
-  note([-123.1, 34.4], 15, "the stratus deck lives out here");
-  note([-118.6, 36.6], 0, "Inland California: almost always clear");
-
-  ov.append("rect").attr("width", W).attr("height", H).attr("fill", "transparent")
-    .on("mousemove", function (e) {
-      const [mx, my] = d3.pointer(e, this);
-      const [lo, la] = proj.invert([mx, my]);
-      const r = Math.round((lat0 - la) / step), c = Math.round((lo - lon0) / step);
-      if (r < 0 || r >= R || c < 0 || c >= C) return hideTip();
-      const v = valueAt(state.mode, state.slot, r * C + c);
-      showTip(e, `<div class="t">${la.toFixed(2)}°N, ${Math.abs(lo).toFixed(2)}°W · ${slotLabel(state.slot)}</div>` +
-        (state.mode === "avg"
-          ? `Cloudy on <b>${Math.round(v * DAYS.length)}</b> of ${DAYS.length} June days at this hour`
-          : (Number.isNaN(v) ? "No scan" : v ? "<b>Cloudy</b>" : "<b>Clear</b>")));
-    })
-    .on("mouseleave", hideTip);
-
-  function renderMap() {
-    const { mode, slot } = state;
-    for (let p = 0; p < N; p++) { const v = valueAt(mode, slot, p); A[p] = Number.isNaN(v) ? 0 : v; }
-    soften(A);
-    const d = img.data;
-    for (let py = 0, k = 3; py < PH; py++) {
-      const top = r0[py] * C, bot = top + C, ty = fy[py], uy = 1 - ty;
-      for (let px = 0; px < PW; px++, k += 4) {
-        const c = c0[px], tx = fx[px], ux = 1 - tx;
-        const v = (A[top + c] * ux + A[top + c + 1] * tx) * uy + (A[bot + c] * ux + A[bot + c + 1] * tx) * ty;
-        d[k] = v * 235;
+      function showTip(event, html) {
+        tip.html(html).style("opacity", 1);
+        const pad = 14, w = tip.node().offsetWidth, h = tip.node().offsetHeight;
+        let x = event.clientX + pad;
+        if (x + w > window.innerWidth - 8) x = event.clientX - w - pad;
+        tip.style("left", x + "px").style("top", Math.min(event.clientY + pad, window.innerHeight - h - 8) + "px");
       }
-    }
-    offCtx.putImageData(img, 0, 0);
-    ctx.fillStyle = "#1b3550"; ctx.fillRect(0, 0, W, H);
-    ctx.beginPath(); path(land); ctx.fillStyle = "#55604c"; ctx.fill();
-    ctx.drawImage(off, 0, 0, W, H);
-    ctx.beginPath(); path(borders); ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 0.8; ctx.stroke();
-    ctx.beginPath(); path(land); ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 0.8; ctx.stroke();
-  }
+      const hideTip = () => tip.style("opacity", 0);
 
-  // ---- linked chart ----
-  const CW = 860, CH = 270, m = { top: 22, right: 130, bottom: 40, left: 44 };
-  const svg = d3.select("#box-chart").attr("viewBox", `0 0 ${CW} ${CH}`);
-  const x = d3.scaleLinear().domain([0, 14]).range([m.left, CW - m.right]);
-  const y = d3.scaleLinear().domain([0, 100]).range([CH - m.bottom, m.top]);
-  svg.append("rect").attr("x", x(0)).attr("y", m.top).attr("width", x(SUNRISE_SLOT) - x(0))
-    .attr("height", CH - m.top - m.bottom).attr("fill", "var(--night)");
-  svg.append("text").attr("class", "note-label").attr("x", x(0) + 6).attr("y", m.top + 13)
-    .text("Night: infrared-only, fog detection less reliable");
-  svg.append("text").attr("class", "note-label").attr("x", x(SUNRISE_SLOT) + 5).attr("y", m.top + 13).text("☀ sunrise ≈ 5:45");
-  svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
-    .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickSize(-(CW - m.left - m.right)).tickFormat(""));
-  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
-    .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickFormat(d => d + "%").tickSize(0).tickPadding(8))
-    .call(g => g.select(".domain").remove());
-  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${CH - m.bottom})`)
-    .call(d3.axisBottom(x).ticks(15).tickFormat(s => slotToPdt(s) === 12 ? "noon" :
-      `${slotToPdt(s) % 12 || 12}${slotToPdt(s) < 12 ? "a" : "p"}`).tickSize(0).tickPadding(10));
-  svg.append("text").attr("class", "axis-label").attr("x", (m.left + CW - m.right) / 2).attr("y", CH - 4)
-    .attr("text-anchor", "middle").text("Hour (PDT) · click or drag to move the map");
+      Promise.all([
+        d3.json(DATA + "cloud_meta.json"),
+        fetch(DATA + "cloud_frames.bin").then(r => { if (!r.ok) throw Error(r.status); return r.arrayBuffer(); }),
+        d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/states-10m.json"),
+      ]).then(([meta, buf, us]) => drawExplorer(meta, new Uint8Array(buf), us))
+        .catch(e => d3.select("#error").text("Could not load map data. If you opened this file directly, " +
+          "serve the folder instead (python3 -m http.server). " + e));
 
-  const line = d3.line().defined(d => d.pct != null).x(d => x(d.slot)).y(d => y(d.pct));
-  const avgLines = svg.append("g"), dayLines = svg.append("g"), labels = svg.append("g");
-  const rule = svg.append("line").attr("y1", m.top).attr("y2", CH - m.bottom).attr("stroke", "var(--ink)").attr("stroke-width", 1.2);
-  const dots = svg.append("g");
+      function drawExplorer(meta, bits, us) {
+        const { rows: R, cols: C, lat0, lon0, step, bytesPerFrame } = meta;
+        const N = R * C;
 
-  function updateChart() {
-    const cur = state.mode === "avg" ? avgSeries : series(state.mode);
-    avgLines.selectAll("path").data(state.mode === "avg" ? [] : avgSeries).join("path")
-      .attr("fill", "none").attr("stroke", d => COLOR[d.city]).attr("stroke-width", 1.5)
-      .attr("stroke-dasharray", "4 4").attr("opacity", 0.55).attr("d", d => line(d.values));
-    dayLines.selectAll("path").data(cur).join("path")
-      .attr("fill", "none").attr("stroke", d => COLOR[d.city]).attr("stroke-width", 2.4).attr("d", d => line(d.values));
-    const ends = cur.map(s => ({ city: s.city, y: y(s.values[14].pct ?? 0) }));
-    if (Math.abs(ends[0].y - ends[1].y) < 16) {
-      const mid = (ends[0].y + ends[1].y) / 2, up = ends[0].y <= ends[1].y ? 0 : 1;
-      ends[up].y = mid - 8; ends[1 - up].y = mid + 8;
-    }
-    labels.selectAll("text").data(ends).join("text").attr("class", "direct-label")
-      .attr("x", x(14) + 10).attr("y", d => d.y).attr("dy", "0.35em").attr("fill", d => COLOR[d.city]).text(d => d.city);
-    rule.attr("x1", x(state.slot)).attr("x2", x(state.slot));
-    dots.selectAll("circle").data(cur.map(s => ({ city: s.city, pct: s.values[state.slot].pct })))
-      .join("circle").attr("r", 6).attr("cx", x(state.slot)).attr("cy", d => y(d.pct ?? 0))
-      .attr("fill", d => COLOR[d.city]).attr("stroke", "#fff").attr("stroke-width", 2.5)
-      .style("opacity", d => d.pct == null ? 0 : 1);
-    d3.select("#avg-legend").style("display", state.mode === "avg" ? "none" : null);
+        // ---- index frames by (day, slot) ----
+        const frames = meta.timesUTC.map((t, i) => {
+          const d = new Date(t);
+          return { i, day: d.getUTCDate(), slot: d.getUTCHours() - 5 };
+        }).filter(f => f.slot >= 0 && f.slot <= 14);
+        const DAYS = [...new Set(frames.map(f => f.day))].sort((a, b) => a - b);
+        const frameAt = new Map(frames.map(f => [`${f.day}|${f.slot}`, f.i]));
+        const bit = (fi, p) => (bits[fi * bytesPerFrame + (p >> 3)] >> (p & 7)) & 1;
 
-    const [sf, sd] = cur.map(s => s.values[state.slot].pct);
-    const when = state.mode === "avg" ? "averaged over June" : `on June ${state.mode}`;
-    d3.select("#caption").html(sf == null ? `No scan available at ${slotLabel(state.slot)} ${when}.` :
-      `At <b>${slotLabel(state.slot)}</b>, ${when}: <b class="sf">${Math.round(sf)}%</b> of San Francisco's coastal land ` +
-      `and <b class="sd">${Math.round(sd)}%</b> of San Diego's was under cloud.` +
-      (state.slot < SUNRISE_SLOT ? " <span style='color:var(--muted)'>(night-time reading, lower confidence)</span>" : ""));
-  }
+        const avg = d3.range(15).map(s => {
+          const out = new Float32Array(N), fs = frames.filter(f => f.slot === s);
+          for (const f of fs) {
+            const base = f.i * bytesPerFrame;
+            for (let p = 0; p < N; p++) out[p] += (bits[base + (p >> 3)] >> (p & 7)) & 1;
+          }
+          for (let p = 0; p < N; p++) out[p] /= fs.length;
+          return out;
+        });
+        const valueAt = (mode, s, p) => {
+          if (mode === "avg") return avg[s][p];
+          const fi = frameAt.get(`${mode}|${s}`);
+          return fi == null ? NaN : bit(fi, p);
+        };
 
-  const setSlotFromPointer = function (e) {
-    const [mx] = d3.pointer(e, this);
-    setState({ slot: Math.max(0, Math.min(14, Math.round(x.invert(mx)))) });
-  };
-  svg.append("rect").attr("x", m.left).attr("y", m.top).attr("width", CW - m.left - m.right)
-    .attr("height", CH - m.top - m.bottom).attr("fill", "transparent").style("cursor", "pointer")
-    .on("pointerdown", function (e) { stop(); this.setPointerCapture(e.pointerId); setSlotFromPointer.call(this, e); })
-    .on("pointermove", function (e) { if (e.buttons) setSlotFromPointer.call(this, e); });
+        // ---- coastal land cells inside each city's box ----
+        const land = topojson.feature(us, us.objects.nation);
+        const ca = topojson.feature(us, us.objects.states).features.find(f => f.id === "06");
+        const boxCells = {};
+        for (const city of CITIES) {
+          const b = BOXES[city], cells = [];
+          for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+            const la = lat0 - r * step, lo = lon0 + c * step;
+            if (la >= b.latMin && la <= b.latMax && lo >= b.lonMin && lo <= b.lonMax &&
+              d3.geoContains(ca, [lo, la])) cells.push(r * C + c);
+          }
+          boxCells[city] = cells;
+        }
+        const boxPct = (mode, s, city) => {
+          const v = boxCells[city].map(p => valueAt(mode, s, p));
+          return v.some(Number.isNaN) ? null : 100 * d3.mean(v);
+        };
+        const series = mode => CITIES.map(city => ({
+          city, values: d3.range(15).map(s => ({ slot: s, pct: boxPct(mode, s, city) })),
+        }));
+        const avgSeries = series("avg");
 
-  // ---- controls ----
-  // ---- day strip: each day's daytime (6 AM–noon) coastal cloud cover; drag to pick a day ----
-  const daily = DAYS.map(day => {
-    const o = { day };
-    for (const city of CITIES) o[city] = d3.mean(d3.range(8, 15), s => boxPct(day, s, city));
-    return o;
-  });
-  const SW = 820, SH = 78, sm = { l: 10, r: 10, t: 6, b: 20 };
-  const strip = d3.select("#day-strip").attr("viewBox", `0 0 ${SW} ${SH}`);
-  const sx = d3.scaleLinear().domain([DAYS[0], DAYS.at(-1)]).range([sm.l, SW - sm.r]);
-  const sy = d3.scaleLinear().domain([0, 100]).range([SH - sm.b, sm.t]);
-  strip.append("rect").attr("x", sm.l).attr("y", sm.t).attr("width", SW - sm.l - sm.r)
-    .attr("height", SH - sm.t - sm.b).attr("fill", "#f4f3ee").attr("rx", 4);
-  for (const city of CITIES)
-    strip.append("path").attr("fill", "none").attr("stroke", COLOR[city]).attr("stroke-width", 2)
-      .attr("stroke-linejoin", "round").attr("d", d3.line().curve(d3.curveMonotoneX).x(d => sx(d.day)).y(d => sy(d[city]))(daily));
-  strip.selectAll("text.tick").data([1, 7, 14, 21, 30]).join("text").attr("class", "tick")
-    .attr("x", sx).attr("y", SH - 4).attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--muted)")
-    .text(d => d === 1 ? "Jun 1" : d);
-  const marker = strip.append("g").style("pointer-events", "none");
-  marker.append("line").attr("y1", sm.t - 2).attr("y2", SH - sm.b + 2).attr("stroke", "var(--ink)").attr("stroke-width", 2);
-  const markerDots = marker.selectAll("circle").data(CITIES).join("circle").attr("r", 4)
-    .attr("fill", c => COLOR[c]).attr("stroke", "#fff").attr("stroke-width", 1.5);
+        // ---- map ----
+        const W = 620;   // CSS width of the map
+        const edges = { W: lon0 - step / 2, E: lon0 + (C - 0.5) * step, N: lat0 + step / 2, S: lat0 - (R - 0.5) * step };
+        const bboxGeo = { type: "MultiPoint", coordinates: [[edges.W, edges.S], [edges.E, edges.N]] };
+        const proj = d3.geoMercator().fitWidth(W, bboxGeo);
+        const H = Math.round(d3.geoPath(proj).bounds(bboxGeo)[1][1]);
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const PW = Math.round(W * dpr), PH = Math.round(H * dpr);   // device pixels
+        const canvas = d3.select("#map").attr("width", PW).attr("height", PH).node();
+        const ctx = canvas.getContext("2d");
+        ctx.scale(dpr, dpr);
+        const path = d3.geoPath(proj, ctx);
+        const borders = topojson.mesh(us, us.objects.states, (a, b) => a !== b);
 
-  const pickDay = e => {
-    const [mx] = d3.pointer(e, strip.node());
-    return Math.max(DAYS[0], Math.min(DAYS.at(-1), Math.round(sx.invert(mx))));
-  };
-  strip.on("pointerdown", function (e) { this.setPointerCapture(e.pointerId); stop(); setState({ mode: pickDay(e) }); })
-    .on("pointermove", function (e) {
-      const day = pickDay(e), o = daily.find(d => d.day === day);
-      if (e.buttons) setState({ mode: day });
-      showTip(e, `<div class="t">June ${day}, 6 AM–noon</div>` + CITIES.map(c =>
-        `<span style="color:${COLOR[c]};font-weight:600">${c}</span>: ${Math.round(o[c])}% cloudy`).join("<br>"));
-    })
-    .on("pointerleave", hideTip)
-    .on("keydown", e => {
-      const cur = state.mode === "avg" ? null : state.mode;
-      if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); setState({ mode: cur == null ? DAYS[0] : Math.min(DAYS.at(-1), cur + 1) }); }
-      if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); setState({ mode: cur == null ? DAYS.at(-1) : Math.max(DAYS[0], cur - 1) }); }
-    });
-  d3.select("#prev-day").on("click", () => setState({ mode: state.mode === "avg" ? DAYS.at(-1) : Math.max(DAYS[0], state.mode - 1) }));
-  d3.select("#next-day").on("click", () => setState({ mode: state.mode === "avg" ? DAYS[0] : Math.min(DAYS.at(-1), state.mode + 1) }));
-  d3.select("#avg-btn").on("click", () => setState({ mode: "avg" }));
+        // Cloud layer is drawn at full device resolution. Each device pixel finds its fractional
+        // grid position (exact Mercator latitude) and bilinearly blends the 4 surrounding cells,
+        // so cloud edges are smooth instead of blocky squares.
+        const off = document.createElement("canvas"); off.width = PW; off.height = PH;
+        const offCtx = off.getContext("2d"), img = offCtx.createImageData(PW, PH);
+        for (let k = 0; k < img.data.length; k += 4) img.data[k] = img.data[k + 1] = img.data[k + 2] = 255;
+        const c0 = new Int32Array(PW), fx = new Float32Array(PW), r0 = new Int32Array(PH), fy = new Float32Array(PH);
+        for (let px = 0; px < PW; px++) {
+          const g = Math.max(0, Math.min(C - 1.001, (proj.invert([(px + 0.5) / dpr, H / 2])[0] - lon0) / step));
+          c0[px] = Math.floor(g); fx[px] = g - c0[px];
+        }
+        for (let py = 0; py < PH; py++) {
+          const g = Math.max(0, Math.min(R - 1.001, (lat0 - proj.invert([W / 2, (py + 0.5) / dpr])[1]) / step));
+          r0[py] = Math.floor(g); fy[py] = g - r0[py];
+        }
+        const A = new Float32Array(N), T = new Float32Array(N);
+        // light [1,2,1] blur so lone speckle pixels read as wisps, not hard dots
+        function soften(src) {
+          for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+            const i = r * C + c, l = c > 0 ? i - 1 : i, rr = c < C - 1 ? i + 1 : i;
+            T[i] = (src[l] + 2 * src[i] + src[rr]) / 4;
+          }
+          for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+            const i = r * C + c, u = r > 0 ? i - C : i, d = r < R - 1 ? i + C : i;
+            src[i] = (T[u] + 2 * T[i] + T[d]) / 4;
+          }
+        }
 
-  const fmtDay = day => new Date(Date.UTC(2025, 5, day)).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
-  function updateDayPicker() {
-    const isAvg = state.mode === "avg";
-    d3.select("#avg-btn").attr("aria-pressed", String(isAvg));
-    marker.style("opacity", isAvg ? 0 : 1);
-    if (!isAvg) {
-      const o = daily.find(d => d.day === state.mode);
-      marker.select("line").attr("x1", sx(state.mode)).attr("x2", sx(state.mode));
-      markerDots.attr("cx", sx(state.mode)).attr("cy", c => sy(o[c]));
-    }
-    strip.attr("aria-valuenow", isAvg ? null : state.mode).attr("aria-valuetext", isAvg ? "June average" : fmtDay(state.mode));
-    d3.select("#day-readout").text(isAvg ? "All June" : fmtDay(state.mode));
-  }
-  const slider = d3.select("#slot").on("input", function () { stop(); setState({ slot: +this.value }); });
+        const ov = d3.select("#map-overlay").attr("viewBox", `0 0 ${W} ${H}`);
+        for (const city of CITIES) {
+          const b = BOXES[city];
+          const [x0, y0] = proj([b.lonMin, b.latMax]), [x1, y1] = proj([b.lonMax, b.latMin]);
+          for (const [stroke, sw] of [["#fff", 4], [COLOR[city], 2.2]])
+            ov.append("rect").attr("x", x0 - 3).attr("y", y0 - 3).attr("width", x1 - x0 + 6).attr("height", y1 - y0 + 6)
+              .attr("fill", "none").attr("stroke", stroke).attr("stroke-width", sw).attr("rx", 3);
+          const left = city === "San Diego";   // SD sits at the map's right edge
+          ov.append("text").attr("class", "map-label").attr("x", left ? x0 - 12 : x1 + 10)
+            .attr("text-anchor", left ? "end" : "start").attr("y", (y0 + y1) / 2).attr("dy", "0.35em").text(city);
+        }
+        const note = (lonlat, dy, text) => {
+          const [x, y] = proj(lonlat);
+          ov.append("text").attr("class", "map-note").attr("x", x).attr("y", y + dy).attr("text-anchor", "middle").text(text);
+        };
+        note([-123.1, 34.4], 0, "Pacific Ocean");
+        note([-123.1, 34.4], 15, "the stratus deck lives out here");
+        note([-118.6, 36.6], 0, "Inland California: almost always clear");
 
-  let timer = null;
-  const playBtn = d3.select("#play").on("click", () => timer ? stop() : start());
-  function start() {
-    if (state.slot === 14) setState({ slot: 0 });
-    timer = d3.interval(() => setState({ slot: state.slot === 14 ? 0 : state.slot + 1 }), 650);
-    playBtn.text("❚❚").attr("aria-label", "Pause animation");
-  }
-  function stop() { if (timer) timer.stop(); timer = null; playBtn.text("▶").attr("aria-label", "Play animation"); }
+        ov.append("rect").attr("width", W).attr("height", H).attr("fill", "transparent")
+          .on("mousemove", function (e) {
+            const [mx, my] = d3.pointer(e, this);
+            const [lo, la] = proj.invert([mx, my]);
+            const r = Math.round((lat0 - la) / step), c = Math.round((lo - lon0) / step);
+            if (r < 0 || r >= R || c < 0 || c >= C) return hideTip();
+            const v = valueAt(state.mode, state.slot, r * C + c);
+            showTip(e, `<div class="t">${la.toFixed(2)}°N, ${Math.abs(lo).toFixed(2)}°W · ${slotLabel(state.slot)}</div>` +
+              (state.mode === "avg"
+                ? `Cloudy on <b>${Math.round(v * DAYS.length)}</b> of ${DAYS.length} June days at this hour`
+                : (Number.isNaN(v) ? "No scan" : v ? "<b>Cloudy</b>" : "<b>Clear</b>")));
+          })
+          .on("mouseleave", hideTip);
 
-  // inline text links in the article drive the map
-  d3.selectAll("#view-from-space button.go").on("click", function () {
-    stop();
-    const day = this.dataset.day;
-    setState({ mode: day === "avg" ? "avg" : +day, slot: +this.dataset.slot });
-    const card = document.getElementById("map-card").getBoundingClientRect();
-    if (card.top < 0 || card.top > window.innerHeight * 0.4)
-      document.getElementById("map-card").scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+        function renderMap() {
+          const { mode, slot } = state;
+          for (let p = 0; p < N; p++) { const v = valueAt(mode, slot, p); A[p] = Number.isNaN(v) ? 0 : v; }
+          soften(A);
+          const d = img.data;
+          for (let py = 0, k = 3; py < PH; py++) {
+            const top = r0[py] * C, bot = top + C, ty = fy[py], uy = 1 - ty;
+            for (let px = 0; px < PW; px++, k += 4) {
+              const c = c0[px], tx = fx[px], ux = 1 - tx;
+              const v = (A[top + c] * ux + A[top + c + 1] * tx) * uy + (A[bot + c] * ux + A[bot + c + 1] * tx) * ty;
+              d[k] = v * 235;
+            }
+          }
+          offCtx.putImageData(img, 0, 0);
+          ctx.fillStyle = "#1b3550"; ctx.fillRect(0, 0, W, H);
+          ctx.beginPath(); path(land); ctx.fillStyle = "#55604c"; ctx.fill();
+          ctx.drawImage(off, 0, 0, W, H);
+          ctx.beginPath(); path(borders); ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 0.8; ctx.stroke();
+          ctx.beginPath(); path(land); ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 0.8; ctx.stroke();
+        }
 
-  const state = { mode: "avg", slot: 8 };
-  function setState(patch) {
-    Object.assign(state, patch);
-    slider.property("value", state.slot);
-    d3.select("#time-readout").text(slotLabel(state.slot));
-    updateDayPicker();
-    d3.select("#key-right").text(state.mode === "avg" ? "Cloudy on every June day at this hour" : "Cloudy");
-    renderMap(); updateChart();
-  }
-  setState({});
-}
-})();
-</script>
-<script src="marcus-vis/chart.js"></script>
+        // ---- linked chart ----
+        const CW = 860, CH = 270, m = { top: 22, right: 130, bottom: 40, left: 44 };
+        const svg = d3.select("#box-chart").attr("viewBox", `0 0 ${CW} ${CH}`);
+        const x = d3.scaleLinear().domain([0, 14]).range([m.left, CW - m.right]);
+        const y = d3.scaleLinear().domain([0, 100]).range([CH - m.bottom, m.top]);
+        svg.append("rect").attr("x", x(0)).attr("y", m.top).attr("width", x(SUNRISE_SLOT) - x(0))
+          .attr("height", CH - m.top - m.bottom).attr("fill", "var(--night)");
+        svg.append("text").attr("class", "note-label").attr("x", x(0) + 6).attr("y", m.top + 13)
+          .text("Night: infrared-only, fog detection less reliable");
+        svg.append("text").attr("class", "note-label").attr("x", x(SUNRISE_SLOT) + 5).attr("y", m.top + 13).text("☀ sunrise ≈ 5:45");
+        svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
+          .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickSize(-(CW - m.left - m.right)).tickFormat(""));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
+          .call(d3.axisLeft(y).tickValues([0, 25, 50, 75, 100]).tickFormat(d => d + "%").tickSize(0).tickPadding(8))
+          .call(g => g.select(".domain").remove());
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${CH - m.bottom})`)
+          .call(d3.axisBottom(x).ticks(15).tickFormat(s => slotToPdt(s) === 12 ? "noon" :
+            `${slotToPdt(s) % 12 || 12}${slotToPdt(s) < 12 ? "a" : "p"}`).tickSize(0).tickPadding(10));
+        svg.append("text").attr("class", "axis-label").attr("x", (m.left + CW - m.right) / 2).attr("y", CH - 4)
+          .attr("text-anchor", "middle").text("Hour (PDT) · click or drag to move the map");
+
+        const line = d3.line().defined(d => d.pct != null).x(d => x(d.slot)).y(d => y(d.pct));
+        const avgLines = svg.append("g"), dayLines = svg.append("g"), labels = svg.append("g");
+        const rule = svg.append("line").attr("y1", m.top).attr("y2", CH - m.bottom).attr("stroke", "var(--ink)").attr("stroke-width", 1.2);
+        const dots = svg.append("g");
+
+        function updateChart() {
+          const cur = state.mode === "avg" ? avgSeries : series(state.mode);
+          avgLines.selectAll("path").data(state.mode === "avg" ? [] : avgSeries).join("path")
+            .attr("fill", "none").attr("stroke", d => COLOR[d.city]).attr("stroke-width", 1.5)
+            .attr("stroke-dasharray", "4 4").attr("opacity", 0.55).attr("d", d => line(d.values));
+          dayLines.selectAll("path").data(cur).join("path")
+            .attr("fill", "none").attr("stroke", d => COLOR[d.city]).attr("stroke-width", 2.4).attr("d", d => line(d.values));
+          const ends = cur.map(s => ({ city: s.city, y: y(s.values[14].pct ?? 0) }));
+          if (Math.abs(ends[0].y - ends[1].y) < 16) {
+            const mid = (ends[0].y + ends[1].y) / 2, up = ends[0].y <= ends[1].y ? 0 : 1;
+            ends[up].y = mid - 8; ends[1 - up].y = mid + 8;
+          }
+          labels.selectAll("text").data(ends).join("text").attr("class", "direct-label")
+            .attr("x", x(14) + 10).attr("y", d => d.y).attr("dy", "0.35em").attr("fill", d => COLOR[d.city]).text(d => d.city);
+          rule.attr("x1", x(state.slot)).attr("x2", x(state.slot));
+          dots.selectAll("circle").data(cur.map(s => ({ city: s.city, pct: s.values[state.slot].pct })))
+            .join("circle").attr("r", 6).attr("cx", x(state.slot)).attr("cy", d => y(d.pct ?? 0))
+            .attr("fill", d => COLOR[d.city]).attr("stroke", "#fff").attr("stroke-width", 2.5)
+            .style("opacity", d => d.pct == null ? 0 : 1);
+          d3.select("#avg-legend").style("display", state.mode === "avg" ? "none" : null);
+
+          const [sf, sd] = cur.map(s => s.values[state.slot].pct);
+          const when = state.mode === "avg" ? "averaged over June" : `on June ${state.mode}`;
+          d3.select("#caption").html(sf == null ? `No scan available at ${slotLabel(state.slot)} ${when}.` :
+            `At <b>${slotLabel(state.slot)}</b>, ${when}: <b class="sf">${Math.round(sf)}%</b> of San Francisco's coastal land ` +
+            `and <b class="sd">${Math.round(sd)}%</b> of San Diego's was under cloud.` +
+            (state.slot < SUNRISE_SLOT ? " <span style='color:var(--muted)'>(night-time reading, lower confidence)</span>" : ""));
+        }
+
+        const setSlotFromPointer = function (e) {
+          const [mx] = d3.pointer(e, this);
+          setState({ slot: Math.max(0, Math.min(14, Math.round(x.invert(mx)))) });
+        };
+        svg.append("rect").attr("x", m.left).attr("y", m.top).attr("width", CW - m.left - m.right)
+          .attr("height", CH - m.top - m.bottom).attr("fill", "transparent").style("cursor", "pointer")
+          .on("pointerdown", function (e) { stop(); this.setPointerCapture(e.pointerId); setSlotFromPointer.call(this, e); })
+          .on("pointermove", function (e) { if (e.buttons) setSlotFromPointer.call(this, e); });
+
+        // ---- controls ----
+        // ---- day strip: each day's daytime (6 AM–noon) coastal cloud cover; drag to pick a day ----
+        const daily = DAYS.map(day => {
+          const o = { day };
+          for (const city of CITIES) o[city] = d3.mean(d3.range(8, 15), s => boxPct(day, s, city));
+          return o;
+        });
+        const SW = 820, SH = 78, sm = { l: 10, r: 10, t: 6, b: 20 };
+        const strip = d3.select("#day-strip").attr("viewBox", `0 0 ${SW} ${SH}`);
+        const sx = d3.scaleLinear().domain([DAYS[0], DAYS.at(-1)]).range([sm.l, SW - sm.r]);
+        const sy = d3.scaleLinear().domain([0, 100]).range([SH - sm.b, sm.t]);
+        strip.append("rect").attr("x", sm.l).attr("y", sm.t).attr("width", SW - sm.l - sm.r)
+          .attr("height", SH - sm.t - sm.b).attr("fill", "#f4f3ee").attr("rx", 4);
+        for (const city of CITIES)
+          strip.append("path").attr("fill", "none").attr("stroke", COLOR[city]).attr("stroke-width", 2)
+            .attr("stroke-linejoin", "round").attr("d", d3.line().curve(d3.curveMonotoneX).x(d => sx(d.day)).y(d => sy(d[city]))(daily));
+        strip.selectAll("text.tick").data([1, 7, 14, 21, 30]).join("text").attr("class", "tick")
+          .attr("x", sx).attr("y", SH - 4).attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--muted)")
+          .text(d => d === 1 ? "Jun 1" : d);
+        const marker = strip.append("g").style("pointer-events", "none");
+        marker.append("line").attr("y1", sm.t - 2).attr("y2", SH - sm.b + 2).attr("stroke", "var(--ink)").attr("stroke-width", 2);
+        const markerDots = marker.selectAll("circle").data(CITIES).join("circle").attr("r", 4)
+          .attr("fill", c => COLOR[c]).attr("stroke", "#fff").attr("stroke-width", 1.5);
+
+        const pickDay = e => {
+          const [mx] = d3.pointer(e, strip.node());
+          return Math.max(DAYS[0], Math.min(DAYS.at(-1), Math.round(sx.invert(mx))));
+        };
+        strip.on("pointerdown", function (e) { this.setPointerCapture(e.pointerId); stop(); setState({ mode: pickDay(e) }); })
+          .on("pointermove", function (e) {
+            const day = pickDay(e), o = daily.find(d => d.day === day);
+            if (e.buttons) setState({ mode: day });
+            showTip(e, `<div class="t">June ${day}, 6 AM–noon</div>` + CITIES.map(c =>
+              `<span style="color:${COLOR[c]};font-weight:600">${c}</span>: ${Math.round(o[c])}% cloudy`).join("<br>"));
+          })
+          .on("pointerleave", hideTip)
+          .on("keydown", e => {
+            const cur = state.mode === "avg" ? null : state.mode;
+            if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); setState({ mode: cur == null ? DAYS[0] : Math.min(DAYS.at(-1), cur + 1) }); }
+            if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); setState({ mode: cur == null ? DAYS.at(-1) : Math.max(DAYS[0], cur - 1) }); }
+          });
+        d3.select("#prev-day").on("click", () => setState({ mode: state.mode === "avg" ? DAYS.at(-1) : Math.max(DAYS[0], state.mode - 1) }));
+        d3.select("#next-day").on("click", () => setState({ mode: state.mode === "avg" ? DAYS[0] : Math.min(DAYS.at(-1), state.mode + 1) }));
+        d3.select("#avg-btn").on("click", () => setState({ mode: "avg" }));
+
+        const fmtDay = day => new Date(Date.UTC(2025, 5, day)).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+        function updateDayPicker() {
+          const isAvg = state.mode === "avg";
+          d3.select("#avg-btn").attr("aria-pressed", String(isAvg));
+          marker.style("opacity", isAvg ? 0 : 1);
+          if (!isAvg) {
+            const o = daily.find(d => d.day === state.mode);
+            marker.select("line").attr("x1", sx(state.mode)).attr("x2", sx(state.mode));
+            markerDots.attr("cx", sx(state.mode)).attr("cy", c => sy(o[c]));
+          }
+          strip.attr("aria-valuenow", isAvg ? null : state.mode).attr("aria-valuetext", isAvg ? "June average" : fmtDay(state.mode));
+          d3.select("#day-readout").text(isAvg ? "All June" : fmtDay(state.mode));
+        }
+        const slider = d3.select("#slot").on("input", function () { stop(); setState({ slot: +this.value }); });
+
+        let timer = null;
+        const playBtn = d3.select("#play").on("click", () => timer ? stop() : start());
+        function start() {
+          if (state.slot === 14) setState({ slot: 0 });
+          timer = d3.interval(() => setState({ slot: state.slot === 14 ? 0 : state.slot + 1 }), 650);
+          playBtn.text("❚❚").attr("aria-label", "Pause animation");
+        }
+        function stop() { if (timer) timer.stop(); timer = null; playBtn.text("▶").attr("aria-label", "Play animation"); }
+
+        // inline text links in the article drive the map
+        d3.selectAll("#view-from-space button.go").on("click", function () {
+          stop();
+          const day = this.dataset.day;
+          setState({ mode: day === "avg" ? "avg" : +day, slot: +this.dataset.slot });
+          const card = document.getElementById("map-card").getBoundingClientRect();
+          if (card.top < 0 || card.top > window.innerHeight * 0.4)
+            document.getElementById("map-card").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+
+        const state = { mode: "avg", slot: 8 };
+        function setState(patch) {
+          Object.assign(state, patch);
+          slider.property("value", state.slot);
+          d3.select("#time-readout").text(slotLabel(state.slot));
+          updateDayPicker();
+          d3.select("#key-right").text(state.mode === "avg" ? "Cloudy on every June day at this hour" : "Cloudy");
+          renderMap(); updateChart();
+        }
+        setState({});
+      }
+    })();
+  </script>
+  <script src="marcus-vis/chart.js"></script>
 </body>
+
 </html>
