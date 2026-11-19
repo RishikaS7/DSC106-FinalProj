@@ -121,6 +121,16 @@
   footer { font-family: var(--sans); font-size: 12.5px; color: var(--muted); line-height: 1.6; padding: 28px 16px 60px; }
   #error { color: #b42318; }
   code { font-size: .85em; background: #ece9e0; padding: 1px 5px; border-radius: 4px; }
+
+  #marcus-chart g[tabindex]:focus { outline: none; }
+  #marcus-chart g[tabindex]:focus-visible .row-bg { stroke: #202c39; stroke-width: 1.5; }
+  #marcus-detail { min-height: 3em; font-size: 13px; color: #4a4945; }
+  #marcus-summary { font-variant-numeric: tabular-nums; }
+  #marcus-play:disabled { opacity: .45; cursor: wait; }
+  .marcus-key { display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:#4a4945; margin: 0 0 12px; }
+  .marcus-key span::before { content:""; display:inline-block; width:12px; height:12px; margin-right:6px; vertical-align:-1px; background:var(--key); border-radius:2px; }
+  .marcus-key .marcus-tie::before { width:6px; height:6px; border-radius:50%; vertical-align:1px; }
+  .marcus-tooltip { position:fixed; z-index:20; pointer-events:none; max-width:min(310px, calc(100vw - 24px)); padding:10px 12px; background:#fff; color:#202c39; border:1px solid #d4d8da; border-radius:8px; box-shadow:0 4px 16px #0002; font:13px/1.6 system-ui,sans-serif; }
 </style>
 </head>
 <body>
@@ -231,9 +241,30 @@
 
 <section id="part-3">
   <div class="prose">
-    <div class="part-head todo"><span class="num">03</span><span class="label">Coming soon</span></div>
-    <div class="placeholder">Marcus's section goes here</div>
+    <div class="part-head"><span class="num">03</span><span class="label">Day by day</span></div>
+    <h2>Which city is actually cloudier day to day?</h2>
+    <p>Looking at the monthly average does not tell us what happened on each day. At noon,
+      San Francisco was cloudier on 18 days, while San Diego was cloudier on 10 days. The other two days were tied.
+      San Diego still had a higher average cloud cover at noon: 21.4% compared with 20.7% in San Francisco. The average also depends on how big the differences were.</p>
+    <p>Use the slider or press play to see how the comparison changes from 6 AM to noon.
+      Each bar is one day. Blue means San Francisco was cloudier, and orange means San Diego was cloudier.
+      A longer bar means the difference was bigger. Hover over a day to see the cloud cover for both cities.</p>
   </div>
+  <div class="figure"><div class="fig-card">
+    <p class="fig-title">Which city is cloudier on each day?</p>
+    <p class="fig-sub">Press play or move the slider to compare 6 AM–noon PDT. Hover, tap, or focus a day for exact values.</p>
+    <div class="marcus-key" aria-label="Chart legend"><span style="--key:#2a78d6">SF cloudier</span><span style="--key:#eb6834">SD cloudier</span><span class="marcus-tie" style="--key:#65717a">Dot at zero = tie</span></div>
+    <div class="controls"><button id="marcus-play" class="play" type="button" aria-label="Play morning comparison" aria-pressed="false" disabled>▶</button><label for="marcus-hour">Hour (PDT)</label>
+      <input id="marcus-hour" type="range" min="6" max="12" step="1" value="12">
+      <output id="marcus-hour-label" for="marcus-hour" class="time-readout">Noon</output></div>
+    <p id="marcus-summary" aria-live="polite"></p>
+    <svg id="marcus-chart" role="group" aria-label="Daily difference in San Diego minus San Francisco cloud cover" viewBox="0 0 860 830">
+    </svg>
+    <p id="marcus-detail" aria-live="polite">Select a row to inspect a day.</p>
+    <p id="marcus-error" role="alert"></p>
+  </div><p class="fig-note">Source: NOAA GOES-18 coastal cloud-cover observations. Source hours are UTC; PDT = UTC−7.
+    This comparison focuses on 6 AM–noon PDT; see Part 1 for overnight patterns. Differences are SD minus SF in percentage points. Percentages measure cloud cover, not exact clearing time.
+    Counts describe these 30 days and these study regions.</p></div>
 </section>
 
 <section id="part-4">
@@ -263,6 +294,12 @@
       While building this, I found that the <code>hour</code> field in our shared JSON is in UTC, not Pacific time,
       which means our data actually covers 1 AM to noon local time rather than 8 AM to 7 PM.</p>
 
+    <p class="who">Marcus · Day by day</p>
+    <p>I made a bar chart that compares cloud cover in San Francisco and San Diego for each day in June.
+      You can move the slider or press play to see how the differences change from 6 AM to noon.
+      Hovering over a day shows the cloud cover for both cities and how far apart they were.
+      I also added a count of how many days each city was cloudier so it is easier to compare the daily results with the monthly average.</p>
+
     <h3>What will be most challenging to design, and why?</h3>
     <p class="who">Rishika · The view from space</p>
     <p>The hardest design problem is being honest about the night. Before about 5:45 AM, the satellite can only
@@ -273,6 +310,11 @@
       downloads of the afternoon scans. Finally, we have to stitch four separately built sections into one article
       that follows an and-but-therefore arc, which means agreeing on shared colors, city definitions, and a single
       takeaway before the final deadline.</p>
+    <p class="who">Marcus · Day by day</p>
+    <p>I think the hardest part will be explaining why a city can have a higher average cloud cover but still be cloudier on fewer days.
+      The bars help show this because you can see both which city was cloudier and how big the difference was.
+      Another challenge is making all 30 days easy to read, especially on a smaller screen.
+      We also need to make sure our sections use the same time zone and study areas so we are making fair comparisons.</p>
   </div>
 </section>
 
@@ -619,5 +661,6 @@ function drawExplorer(meta, bits, us) {
 }
 })();
 </script>
+<script src="marcus-vis/chart.js"></script>
 </body>
 </html>
