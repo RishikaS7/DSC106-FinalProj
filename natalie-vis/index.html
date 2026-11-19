@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>When does the coast finally see the sun?</title>
+    <link rel="stylesheet" href="first-sun.css">
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 1040px;
+            margin: 2rem auto;
+            padding: 0 1.2rem;
+            color: #1b2030;
+            line-height: 1.5;
+        }
+
+        h2 {
+            margin-bottom: .3rem;
+            font-size: 1.7rem;
+        }
+
+        .lede {
+            max-width: 66ch;
+        }
+    </style>
+</head>
+
+<body>
+
+    <section id="first-sun-section">
+        <h2>When does the coast finally see the sun?</h2>
+        <p class="lede">An average cloud map hides the thing you actually care about: when to go outside. Here every
+            spot is colored by the hour the sun likely breaks through. Slide through every day of June to compare the
+            two coasts, switch to the June average to change what counts as sunny, or hover a spot to see its morning.
+        </p>
+        <div id="first-sun"></div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+    <script type="module">
+        import { loadFirstSunData } from './first-sun-data.js';
+        import { initFirstSun } from './first-sun.js';
+
+        const root = document.querySelector('#first-sun');
+        try {
+            const us = await d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json');
+            const basemap = topojson.feature(us, us.objects.states);
+            const data = await loadFirstSunData('data/firstsun');
+            initFirstSun(root, data, { basemap });
+        } catch (err) {
+            console.error(err);
+            root.innerHTML = `<p class="fs-error"><strong>The map could not load.</strong>
+      ${err.message}. If you opened this file by double-clicking it, run
+      <code>python -m http.server 8000</code> in this folder and visit
+      <code>http://localhost:8000</code> instead.</p>`;
+        }
+    </script>
+</body>
+
+</html>

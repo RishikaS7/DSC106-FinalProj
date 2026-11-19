@@ -1,0 +1,30 @@
+{
+  "grid": {
+    "lat0": 32.4,
+    "lon0": -123.0,
+    "dlat": 0.03,
+    "dlon": 0.03,
+    "nLat": 190,
+    "nLon": 214
+  },
+  "hours": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "nDays": 30,
+  "year": 2025,
+  "month": 6,
+  "bytesPerFrame": 10165,
+  "encoding": "2 bits per cell, 4 cells per byte, low bits first; 0 clear, 1 cloudy, 3 missing",
+  "source": "NOAA GOES-18 ABI-L2-ACMC, one scan per hour, nearest-neighbour regrid; local time = UTC-7"
+}

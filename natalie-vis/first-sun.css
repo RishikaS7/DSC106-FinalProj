@@ -1,0 +1,85 @@
+/* first-sun.css: change the variables below to match the rest of the article. */
+.fs-root {
+  --fs-ink: #1b2030;
+  --fs-muted: #5b6475;
+  --fs-line: #dde1e8;
+  --fs-soft: #f3f4f7;
+  --fs-accent: #5b3a8c;      /* sliders, selected toggle */
+  --fs-sun: #e0a100;
+  font-family: inherit;
+  color: var(--fs-ink);
+}
+.fs-root * { box-sizing: border-box; }
+
+/* ---- controls ---- */
+.fs-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2rem; margin: 1.2rem 0 1rem; }
+.fs-seg { display: inline-flex; border: 1px solid var(--fs-line); border-radius: 8px; overflow: hidden; }
+.fs-seg label { cursor: pointer; }
+.fs-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.fs-seg span { display: block; padding: .5rem 1rem; font-size: .92rem; background: #fff; }
+.fs-seg input:checked + span { background: var(--fs-ink); color: #fff; }
+.fs-seg input:focus-visible + span { outline: 2px solid var(--fs-accent); outline-offset: -2px; }
+.fs-slider { display: flex; flex-direction: column; gap: .3rem; font-size: .92rem; min-width: 240px; max-width: 340px; flex: 1 1 240px; }
+.fs-slider[hidden] { display: none; }
+.fs-slider output { font-weight: 700; font-variant-numeric: tabular-nums; }
+.fs-slider input[type=range] { width: 100%; accent-color: var(--fs-accent); }
+
+/* ---- the sentence that states the finding ---- */
+.fs-takeaway { font-size: 1.15rem; line-height: 1.45; font-weight: 600; max-width: 62ch; min-height: 3.2em; margin: 0 0 1rem; }
+
+/* ---- maps: two equal columns, side by side. They stack only when the container is narrow (phones). ---- */
+.fs-maps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 1.25rem; }
+.fs-panel { margin: 0; min-width: 0; }
+.fs-panel figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .75rem; margin-bottom: .45rem; }
+.fs-city { font-weight: 700; font-size: 1rem; }
+.fs-big { font-size: 1.9rem; font-weight: 800; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.fs-sub { font-size: .8rem; color: var(--fs-muted); }
+.fs-canvas-wrap { position: relative; line-height: 0; }
+/* canvases are sized in CSS px here; their pixel buffers are larger on high-DPI screens */
+.fs-canvas-wrap canvas { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--fs-soft); }
+.fs-canvas-wrap canvas.fs-hover { position: absolute; inset: 0; background: transparent; cursor: crosshair; }
+.fs-tip { position: absolute; pointer-events: none; background: var(--fs-ink); color: #fff; font-size: .78rem; line-height: 1.3;
+  padding: .3rem .55rem; border-radius: 5px; white-space: nowrap; }
+.fs-tip[hidden] { display: none; }
+
+/* ---- legend ---- */
+.fs-legend { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem 2.5rem; margin: 1rem 0 1.2rem; font-size: .82rem; color: var(--fs-muted); }
+.fs-scale { width: 320px; max-width: 100%; position: relative; padding-bottom: 1.4rem; }
+.fs-bar { height: 12px; border-radius: 6px; }
+.fs-ticks { position: relative; height: 1rem; margin-top: 3px; }
+.fs-ticks span { position: absolute; transform: translateX(-50%); font-size: .72rem; font-variant-numeric: tabular-nums; }
+.fs-ticks span:first-child { transform: none; }
+.fs-ticks span:last-child { transform: translateX(-100%); }
+.fs-scale-title { position: absolute; left: 0; bottom: -.1rem; font-weight: 600; color: var(--fs-ink); }
+.fs-keys { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; }
+.fs-key-item { display: inline-flex; align-items: center; gap: .4rem; }
+.fs-sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+.fs-line { width: 18px; height: 0; border-top: 2px solid #9a9fb0; display: inline-block; }
+.fs-dash { width: 16px; height: 11px; border: 1.5px dashed var(--fs-ink); display: inline-block; }
+
+/* ---- hover chart ---- */
+.fs-inset { margin-top: 1.2rem; max-width: 640px; min-height: 250px; }
+.fs-hint, .fs-note { font-size: .85rem; color: var(--fs-muted); max-width: 70ch; }
+.fs-inset-head { font-size: .95rem; margin-bottom: .2rem; }
+.fs-muted { color: var(--fs-muted); }
+.fs-inset svg { width: 100%; height: auto; display: block; overflow: visible; }
+.fs-shade { fill: #9aa1ad; opacity: .22; }
+.fs-grid { stroke: var(--fs-line); stroke-width: 1; }
+.fs-svg-tick { font-size: 10.5px; fill: var(--fs-muted); }
+.fs-svg-note { font-size: 10.5px; fill: var(--fs-muted); }
+.fs-svg-sun { font-size: 12px; font-weight: 700; fill: #8a6400; }
+.fs-avg-line { fill: none; stroke: #5b6b8a; stroke-width: 2.2; }
+.fs-day-line { fill: none; stroke: #c2410c; stroke-width: 2.2; }
+.fs-thr-line { stroke: var(--fs-ink); stroke-width: 1; stroke-dasharray: 4 3; }
+.fs-sun-line { stroke: var(--fs-sun); stroke-width: 3; }
+.fs-key-line { font-size: .8rem; color: var(--fs-muted); margin: .2rem 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem 1rem; }
+.fs-sw-line { display: inline-block; width: 16px; height: 0; border-top: 3px solid; margin-right: .35rem; vertical-align: middle; }
+.fs-sw-avg { border-color: #5b6b8a; }
+.fs-sw-day { border-color: #c2410c; }
+.fs-note { margin-top: 1.4rem; }
+.fs-error { background: #fde8e8; border: 1px solid #c0392b; padding: .8rem 1rem; border-radius: 6px; }
+
+@media (max-width: 700px) {
+  .fs-takeaway { min-height: 0; }
+  .fs-inset { min-height: 0; }
+}
